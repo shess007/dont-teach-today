@@ -28,14 +28,14 @@ An asymmetric 2-player local multiplayer browser game built with PixiJS.
 
 - [x] Phase 1: Project setup and basic HTML5 canvas infrastructure
 - [x] Phase 2: Core game loop and rendering system
-- [ ] Phase 3: Player 1 (Teacher) movement and controls
-- [ ] Phase 4: Player 2 (Pupil) crosshair and egg throwing mechanics
-- [ ] Phase 5: Sprint system with cooldown for teacher
-- [ ] Phase 6: Collision detection and egg impact mechanics
-- [ ] Phase 7: Schoolyard layout with obstacles and navigation
-- [ ] Phase 8: Hiding mechanics in bushes
-- [ ] Phase 9: Timer system and win/lose conditions
-- [ ] Phase 10: Chicken coop egg refill system
+- [x] Phase 3: Player 1 (Teacher) movement and controls
+- [x] Phase 4: Player 2 (Pupil) crosshair and egg throwing mechanics
+- [x] Phase 5: Sprint system with cooldown for teacher
+- [x] Phase 6: Collision detection and egg impact mechanics
+- [x] Phase 7: Schoolyard layout with obstacles and navigation
+- [x] Phase 8: Hiding mechanics in bushes
+- [x] Phase 9: Timer system and win/lose conditions
+- [x] Phase 10: Chicken coop egg refill system
 - [ ] Phase 11: UI elements (timer, egg count, sprint meter)
 - [ ] Phase 12: Visual feedback (splats, screen shake, effects)
 - [ ] Phase 13: Pixel art assets (placeholder to final)

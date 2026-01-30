@@ -13,6 +13,11 @@ class Pupil {
         this.throwCooldown = 0;
         this.canThrow = true;
 
+        // Refill system
+        this.isRefilling = false;
+        this.refillTimer = 0;
+        this.chickenCoop = null; // Reference to chicken coop obstacle
+
         // Crosshair position (follows mouse)
         this.crosshairX = CONFIG.SCREEN.WIDTH / 2;
         this.crosshairY = CONFIG.SCREEN.HEIGHT / 2;
@@ -67,7 +72,7 @@ class Pupil {
     /**
      * Update pupil state
      */
-    update(deltaTime, teacher) {
+    update(deltaTime, teacher, obstacles = []) {
         // Update cooldown
         if (this.throwCooldown > 0) {
             this.throwCooldown -= deltaTime;
@@ -77,22 +82,49 @@ class Pupil {
             }
         }
 
+        // Update refill timer
+        if (this.isRefilling) {
+            this.refillTimer -= deltaTime;
+            if (this.refillTimer <= 0) {
+                this.completeRefill();
+            }
+        }
+
+        // Find chicken coop in obstacles (do this once per update)
+        this.chickenCoop = obstacles.find(obs => obs.type === 'CHICKEN_COOP');
+
         // Update crosshair position from mouse
         const mousePos = this.input.getMousePosition();
         this.crosshairX = mousePos.x;
         this.crosshairY = mousePos.y;
 
-        // Update crosshair sprite position
+        // Update crosshair sprite position and color
         if (this.crosshairSprite) {
             this.crosshairSprite.x = this.crosshairX;
             this.crosshairSprite.y = this.crosshairY;
+
+            // Change color based on what we're hovering over
+            if (this.isClickingChickenCoop()) {
+                // Green when over chicken coop (can refill)
+                this.crosshairSprite.tint = this.eggCount >= this.maxEggs ? 0xaaaaaa : 0x00ff00;
+            } else {
+                // Red when aiming to throw
+                this.crosshairSprite.tint = 0xffffff;
+            }
         }
 
         // Draw trajectory preview
         this.drawTrajectoryPreview();
 
-        // Check for throw input and return projectile if created
+        // Check for mouse click
         if (this.input.wasMouseClicked()) {
+            // Check if clicking on chicken coop for refill
+            if (this.isClickingChickenCoop()) {
+                this.startRefill();
+                return null;
+            }
+
+            // Otherwise try to throw egg
             return this.tryThrowEgg();
         }
 
@@ -181,7 +213,56 @@ class Pupil {
     }
 
     /**
-     * Add eggs to inventory (from chicken coop)
+     * Check if crosshair is over chicken coop
+     */
+    isClickingChickenCoop() {
+        if (!this.chickenCoop) return false;
+
+        // Check if crosshair position is inside chicken coop bounds
+        return this.crosshairX >= this.chickenCoop.x &&
+               this.crosshairX <= this.chickenCoop.x + this.chickenCoop.width &&
+               this.crosshairY >= this.chickenCoop.y &&
+               this.crosshairY <= this.chickenCoop.y + this.chickenCoop.height;
+    }
+
+    /**
+     * Start refilling eggs at chicken coop
+     */
+    startRefill() {
+        // Can't refill if already full or already refilling
+        if (this.eggCount >= this.maxEggs) {
+            console.log('Eggs already full!');
+            return;
+        }
+
+        if (this.isRefilling) {
+            console.log('Already refilling...');
+            return;
+        }
+
+        // Start refill timer
+        this.isRefilling = true;
+        this.refillTimer = CONFIG.PUPIL.REFILL_DELAY;
+        console.log('Refilling eggs at chicken coop...');
+    }
+
+    /**
+     * Complete the refill and add eggs
+     */
+    completeRefill() {
+        this.isRefilling = false;
+        this.refillTimer = 0;
+
+        // Add eggs (based on config)
+        const eggsToAdd = CONFIG.PUPIL.REFILL_AMOUNT;
+        const eggsAdded = Math.min(eggsToAdd, this.maxEggs - this.eggCount);
+        this.eggCount += eggsAdded;
+
+        console.log(`Refill complete! +${eggsAdded} egg(s). Total: ${this.eggCount}/${this.maxEggs}`);
+    }
+
+    /**
+     * Add eggs to inventory (legacy method for compatibility)
      */
     addEgg() {
         if (this.eggCount < this.maxEggs) {

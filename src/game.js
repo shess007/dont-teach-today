@@ -19,6 +19,9 @@ class Game {
         this.timeRemaining = CONFIG.GAME.MATCH_DURATION;
         this.lastTime = 0;
 
+        // UI elements
+        this.timerText = null;
+
         // Note: init() is called separately since it's async
     }
 
@@ -144,6 +147,51 @@ class Game {
     }
 
     /**
+     * Create timer display for gameplay
+     */
+    createTimerDisplay() {
+        // Create timer text
+        this.timerText = new PIXI.Text('', {
+            fontFamily: CONFIG.UI.FONT_FAMILY,
+            fontSize: CONFIG.UI.FONT_SIZE_LARGE,
+            fill: 0xffffff,
+            align: 'center',
+            fontWeight: 'bold',
+            stroke: 0x000000,
+            strokeThickness: 4
+        });
+        this.timerText.anchor.set(0.5, 0);
+        this.timerText.x = CONFIG.SCREEN.WIDTH / 2;
+        this.timerText.y = 20;
+        this.uiLayer.addChild(this.timerText);
+
+        // Update timer text immediately
+        this.updateTimerDisplay();
+    }
+
+    /**
+     * Update timer display text
+     */
+    updateTimerDisplay() {
+        if (!this.timerText) return;
+
+        const minutes = Math.floor(this.timeRemaining / 60);
+        const seconds = Math.floor(this.timeRemaining % 60);
+        const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        this.timerText.text = timeString;
+
+        // Change color based on remaining time
+        if (this.timeRemaining <= 10) {
+            this.timerText.fill = 0xff0000; // Red when low
+        } else if (this.timeRemaining <= 30) {
+            this.timerText.fill = 0xffaa00; // Orange warning
+        } else {
+            this.timerText.fill = 0xffffff; // White normally
+        }
+    }
+
+    /**
      * Show start screen
      */
     showStartScreen() {
@@ -166,7 +214,8 @@ class Game {
         // Instructions
         const instructions = new PIXI.Text(
             'Player 1 (Teacher): WASD/Arrows + SHIFT to sprint\n' +
-            'Player 2 (Pupil): Mouse to aim, Click to throw eggs\n\n' +
+            'Player 2 (Pupil): Mouse to aim, Click to throw eggs\n' +
+            'Click the red chicken coop to refill eggs!\n\n' +
             'Teacher: Reach the school building!\n' +
             'Pupil: Stop the teacher before time runs out!\n\n' +
             'Press SPACE to start',
@@ -207,6 +256,9 @@ class Game {
         this.projectiles = []; // Array to track active eggs
         this.collisionManager = new CollisionManager();
         this.obstacles = createObstacles(this.obstaclesLayer);
+
+        // Create timer display
+        this.createTimerDisplay();
 
         console.log('Game started! Use WASD to move teacher, Mouse to aim and click to throw eggs!');
     }
@@ -255,6 +307,9 @@ class Game {
         // Update timer
         this.timeRemaining -= deltaTime;
 
+        // Update timer display
+        this.updateTimerDisplay();
+
         // Check for time up
         if (this.timeRemaining <= 0) {
             this.timeRemaining = 0;
@@ -275,7 +330,7 @@ class Game {
 
         // Update pupil and handle egg throwing
         if (this.pupil) {
-            const newProjectile = this.pupil.update(deltaTime, this.teacher);
+            const newProjectile = this.pupil.update(deltaTime, this.teacher, this.obstacles);
 
             // Add new projectile to list if one was created
             if (newProjectile) {
@@ -407,8 +462,9 @@ class Game {
         this.state = GAME_STATE.GAME_OVER;
         this.winner = winner;
 
-        // Clear UI
+        // Clear UI (including timer)
         this.uiLayer.removeChildren();
+        this.timerText = null;
 
         // Show winner
         const winnerText = winner === WINNER.TEACHER

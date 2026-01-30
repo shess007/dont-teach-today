@@ -15,6 +15,11 @@ class CollisionManager {
             return false;
         }
 
+        // Don't check collision if teacher is hidden in a bush
+        if (teacher.isHiddenState()) {
+            return false;
+        }
+
         // Get positions and radii
         const eggPos = egg.getPosition();
         const teacherPos = teacher.getPosition();

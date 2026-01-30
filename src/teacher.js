@@ -89,6 +89,11 @@ class Teacher {
         // Check obstacle collision at next position
         let canMove = true;
         for (const obstacle of obstacles) {
+            // Skip bushes - they are passable for hiding
+            if (obstacle.type === 'BUSH') {
+                continue;
+            }
+
             if (Utils.circleRectCollision(
                 nextX, nextY, CONFIG.TEACHER.HITBOX_RADIUS,
                 obstacle.x, obstacle.y, obstacle.width, obstacle.height
@@ -116,6 +121,9 @@ class Teacher {
             CONFIG.SCREEN.HEIGHT - CONFIG.TEACHER.HITBOX_RADIUS
         );
 
+        // Check if hiding in a bush
+        this.updateHidingState(obstacles);
+
         // Update sprite position
         this.sprite.x = this.x;
         this.sprite.y = this.y;
@@ -125,6 +133,30 @@ class Teacher {
             const angle = Math.atan2(direction.y, direction.x);
             this.sprite.rotation = angle;
         }
+    }
+
+    /**
+     * Check if teacher is hiding in a bush
+     */
+    updateHidingState(obstacles) {
+        let inBush = false;
+
+        // Check if teacher's position overlaps with any bush
+        for (const obstacle of obstacles) {
+            if (obstacle.type === 'BUSH' && obstacle.canHide) {
+                // Check if teacher's center is inside the bush
+                if (Utils.circleRectCollision(
+                    this.x, this.y, CONFIG.TEACHER.HITBOX_RADIUS * 0.5, // Smaller radius for hiding check
+                    obstacle.x, obstacle.y, obstacle.width, obstacle.height
+                )) {
+                    inBush = true;
+                    break;
+                }
+            }
+        }
+
+        // Update hidden state
+        this.setHidden(inBush);
     }
 
     /**
@@ -248,6 +280,13 @@ class Teacher {
      */
     isInvulnerableState() {
         return this.isInvulnerable;
+    }
+
+    /**
+     * Check if teacher is hidden in a bush
+     */
+    isHiddenState() {
+        return this.isHidden;
     }
 
     /**
