@@ -11,7 +11,8 @@ class Game {
         this.pupil = null;
         this.obstacles = [];
         this.projectiles = [];
-        this.effects = [];
+        this.splats = [];
+        this.screenShake = null;
         this.ui = null;
         this.input = null;
 
@@ -371,6 +372,8 @@ class Game {
         this.teacher = new Teacher(this.gameLayer);
         this.pupil = new Pupil(this.gameLayer, this.input);
         this.projectiles = []; // Array to track active eggs
+        this.splats = []; // Array to track egg splats
+        this.screenShake = null;
         this.collisionManager = new CollisionManager();
         this.obstacles = createObstacles(this.obstaclesLayer);
 
@@ -462,6 +465,9 @@ class Game {
         // Update all projectiles
         this.updateProjectiles(deltaTime);
 
+        // Update visual effects
+        this.updateEffects(deltaTime);
+
         // Check collisions between eggs and teacher
         this.checkCollisions();
 
@@ -480,12 +486,64 @@ class Game {
             const projectile = this.projectiles[i];
             projectile.update(deltaTime);
 
+            // Check if projectile just landed (create splat)
+            if (!projectile.isProjectileActive() && projectile.hasLanded) {
+                const pos = projectile.getPosition();
+                this.createSplat(pos.x, pos.y);
+            }
+
             // Remove inactive projectiles (landed or destroyed)
             if (!projectile.isProjectileActive()) {
                 projectile.destroy();
                 this.projectiles.splice(i, 1);
             }
         }
+    }
+
+    /**
+     * Update visual effects
+     */
+    updateEffects(deltaTime) {
+        // Update screen shake
+        if (this.screenShake) {
+            const stillActive = this.screenShake.update(deltaTime);
+            if (!stillActive) {
+                this.screenShake = null;
+            }
+        }
+
+        // Update splats
+        for (let i = this.splats.length - 1; i >= 0; i--) {
+            const splat = this.splats[i];
+            const stillActive = splat.update(deltaTime);
+
+            // Remove old splats
+            if (!stillActive) {
+                splat.destroy();
+                this.splats.splice(i, 1);
+            }
+        }
+    }
+
+    /**
+     * Create a splat effect at position
+     */
+    createSplat(x, y) {
+        const splat = new Splat(x, y, this.gameLayer);
+        this.splats.push(splat);
+    }
+
+    /**
+     * Create screen shake effect
+     */
+    createScreenShake(intensity = 10, duration = 0.3) {
+        // Stop any existing shake
+        if (this.screenShake) {
+            this.screenShake.stop();
+        }
+
+        // Create new shake affecting the entire stage
+        this.screenShake = new ScreenShake(this.app.stage, intensity, duration);
     }
 
     /**
@@ -512,6 +570,17 @@ class Game {
     handleEggHit(egg) {
         console.log('Teacher hit by egg!');
 
+        // Get hit position
+        const hitPos = egg.getPosition();
+
+        // Create visual effects
+        this.createSplat(hitPos.x, hitPos.y);
+        this.createScreenShake(15, 0.4); // Stronger shake for teacher hit
+
+        // Create impact particles
+        const particles = new ImpactParticles(hitPos.x, hitPos.y, this.effectsLayer, CONFIG.COLORS.EGG_SPLAT);
+        this.splats.push(particles); // Reuse splats array for particles
+
         // Respawn teacher at starting position
         this.teacher.respawn();
 
@@ -521,8 +590,6 @@ class Game {
             egg.destroy();
             this.projectiles.splice(index, 1);
         }
-
-        // TODO Phase 12: Add screen shake and splat effect
     }
 
     /**
