@@ -6,7 +6,7 @@ const CONFIG = {
     SCREEN: {
         WIDTH: 1280,
         HEIGHT: 720,
-        BACKGROUND_COLOR: 0x88cc66 // Grass green
+        BACKGROUND_COLOR: 0x3a3a3a // Asphalt gray
     },
 
     // Game timing
@@ -99,8 +99,8 @@ const CONFIG = {
         EGG: 0xFFFDD0, // Cream
         EGG_SPLAT: 0xFFFF00, // Yellow
         TRAJECTORY: 0xff0000, // Red
-        GRASS: 0x88cc66, // Light green
-        PATH: 0xc4a259 // Tan/dirt
+        ASPHALT: 0x3a3a3a, // Dark gray asphalt
+        PATH: 0x505050 // Lighter gray path
     },
 
     // UI settings

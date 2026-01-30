@@ -104,52 +104,84 @@ class Game {
     }
 
     /**
-     * Draw pixel art grass background
+     * Draw pixel art asphalt background
      */
     drawBackground() {
         const bg = new PIXI.Graphics();
 
-        // Base grass field
-        bg.beginFill(CONFIG.COLORS.GRASS);
+        // Base asphalt surface
+        bg.beginFill(CONFIG.COLORS.ASPHALT);
         bg.drawRect(0, 0, CONFIG.SCREEN.WIDTH, CONFIG.SCREEN.HEIGHT);
         bg.endFill();
 
-        // Grass texture (darker patches)
-        bg.beginFill(0x6fa863, 0.5);
+        // Asphalt texture (lighter patches and variations)
+        bg.beginFill(0x454545, 0.3);
         for (let y = 0; y < CONFIG.SCREEN.HEIGHT; y += 40) {
             for (let x = 0; x < CONFIG.SCREEN.WIDTH; x += 60) {
                 const offsetX = (y % 80 === 0) ? 30 : 0;
-                bg.drawRect(x + offsetX + Math.random() * 10, y + Math.random() * 10, 20, 20);
+                bg.drawRect(x + offsetX + Math.random() * 15, y + Math.random() * 15, 25, 25);
             }
         }
         bg.endFill();
 
-        // Dirt path (horizontal)
+        // Darker asphalt patches
+        bg.beginFill(0x2a2a2a, 0.4);
+        for (let y = 0; y < CONFIG.SCREEN.HEIGHT; y += 50) {
+            for (let x = 0; x < CONFIG.SCREEN.WIDTH; x += 70) {
+                const offsetX = (y % 100 === 0) ? 35 : 0;
+                bg.drawRect(x + offsetX + Math.random() * 10, y + Math.random() * 10, 30, 30);
+            }
+        }
+        bg.endFill();
+
+        // Asphalt cracks (thin dark lines)
+        bg.lineStyle(2, 0x1a1a1a, 0.5);
+        for (let i = 0; i < 15; i++) {
+            const startX = Math.random() * CONFIG.SCREEN.WIDTH;
+            const startY = Math.random() * CONFIG.SCREEN.HEIGHT;
+            const length = 40 + Math.random() * 60;
+            const angle = Math.random() * Math.PI * 2;
+            const endX = startX + Math.cos(angle) * length;
+            const endY = startY + Math.sin(angle) * length;
+            bg.moveTo(startX, startY);
+            bg.lineTo(endX, endY);
+        }
+
+        // Horizontal path marking (lighter gray)
         bg.beginFill(CONFIG.COLORS.PATH);
         bg.drawRect(0, CONFIG.SCREEN.HEIGHT / 2 - 50, CONFIG.SCREEN.WIDTH, 100);
         bg.endFill();
 
-        // Path texture (stones/pebbles)
-        bg.beginFill(0xa08050, 0.6);
-        for (let x = 0; x < CONFIG.SCREEN.WIDTH; x += 30) {
+        // Path texture (small stones/aggregate)
+        bg.beginFill(0x5a5a5a, 0.4);
+        for (let x = 0; x < CONFIG.SCREEN.WIDTH; x += 25) {
             const y = CONFIG.SCREEN.HEIGHT / 2 - 40 + Math.random() * 80;
-            bg.drawRect(x + Math.random() * 20, y, 8, 8);
+            bg.drawRect(x + Math.random() * 15, y, 6, 6);
         }
         bg.endFill();
 
-        // Goal line (white dashed line on left)
-        bg.beginFill(0xffffff, 0.7);
+        // Goal line (yellow dashed line on left - like playground markings)
+        bg.beginFill(0xffff00, 0.9);
         for (let y = 0; y < CONFIG.SCREEN.HEIGHT; y += 40) {
-            bg.drawRect(CONFIG.TEACHER.SPAWN_X - 30, y, 4, 20);
+            bg.drawRect(CONFIG.TEACHER.SPAWN_X - 30, y, 5, 20);
         }
         bg.endFill();
 
-        // Finish line (white dashed line near school)
-        bg.beginFill(0xffffff, 0.7);
+        // Finish line (yellow dashed line near school)
+        bg.beginFill(0xffff00, 0.9);
         for (let y = 0; y < CONFIG.SCREEN.HEIGHT; y += 40) {
-            bg.drawRect(CONFIG.TEACHER.GOAL_X, y, 4, 20);
+            bg.drawRect(CONFIG.TEACHER.GOAL_X, y, 5, 20);
         }
         bg.endFill();
+
+        // Add some white painted lines (like sports court markings)
+        bg.lineStyle(3, 0xffffff, 0.6);
+        // Horizontal center line
+        bg.moveTo(0, CONFIG.SCREEN.HEIGHT / 2);
+        bg.lineTo(CONFIG.SCREEN.WIDTH, CONFIG.SCREEN.HEIGHT / 2);
+        // Vertical center line
+        bg.moveTo(CONFIG.SCREEN.WIDTH / 2, 0);
+        bg.lineTo(CONFIG.SCREEN.WIDTH / 2, CONFIG.SCREEN.HEIGHT);
 
         this.backgroundLayer.addChild(bg);
     }
