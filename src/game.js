@@ -15,6 +15,7 @@ class Game {
         this.screenShake = null;
         this.ui = null;
         this.input = null;
+        this.audio = new AudioManager();
 
         // Game timer
         this.timeRemaining = CONFIG.GAME.MATCH_DURATION;
@@ -103,48 +104,130 @@ class Game {
     }
 
     /**
-     * Draw simple background
+     * Draw pixel art grass background
      */
     drawBackground() {
         const bg = new PIXI.Graphics();
 
-        // Grass field
+        // Base grass field
         bg.beginFill(CONFIG.COLORS.GRASS);
         bg.drawRect(0, 0, CONFIG.SCREEN.WIDTH, CONFIG.SCREEN.HEIGHT);
         bg.endFill();
 
-        // Optional: Add some path texture
-        bg.beginFill(CONFIG.COLORS.PATH, 0.3);
+        // Grass texture (darker patches)
+        bg.beginFill(0x6fa863, 0.5);
+        for (let y = 0; y < CONFIG.SCREEN.HEIGHT; y += 40) {
+            for (let x = 0; x < CONFIG.SCREEN.WIDTH; x += 60) {
+                const offsetX = (y % 80 === 0) ? 30 : 0;
+                bg.drawRect(x + offsetX + Math.random() * 10, y + Math.random() * 10, 20, 20);
+            }
+        }
+        bg.endFill();
+
+        // Dirt path (horizontal)
+        bg.beginFill(CONFIG.COLORS.PATH);
         bg.drawRect(0, CONFIG.SCREEN.HEIGHT / 2 - 50, CONFIG.SCREEN.WIDTH, 100);
+        bg.endFill();
+
+        // Path texture (stones/pebbles)
+        bg.beginFill(0xa08050, 0.6);
+        for (let x = 0; x < CONFIG.SCREEN.WIDTH; x += 30) {
+            const y = CONFIG.SCREEN.HEIGHT / 2 - 40 + Math.random() * 80;
+            bg.drawRect(x + Math.random() * 20, y, 8, 8);
+        }
+        bg.endFill();
+
+        // Goal line (white dashed line on left)
+        bg.beginFill(0xffffff, 0.7);
+        for (let y = 0; y < CONFIG.SCREEN.HEIGHT; y += 40) {
+            bg.drawRect(CONFIG.TEACHER.SPAWN_X - 30, y, 4, 20);
+        }
+        bg.endFill();
+
+        // Finish line (white dashed line near school)
+        bg.beginFill(0xffffff, 0.7);
+        for (let y = 0; y < CONFIG.SCREEN.HEIGHT; y += 40) {
+            bg.drawRect(CONFIG.TEACHER.GOAL_X, y, 4, 20);
+        }
         bg.endFill();
 
         this.backgroundLayer.addChild(bg);
     }
 
     /**
-     * Draw school building
+     * Draw pixel art school building
      */
     drawSchool() {
         const school = new PIXI.Graphics();
+        const x = CONFIG.SCHOOL.X;
+        const y = CONFIG.SCHOOL.Y;
+        const w = CONFIG.SCHOOL.WIDTH;
+        const h = CONFIG.SCHOOL.HEIGHT;
+
+        // Main building (red brick)
         school.beginFill(CONFIG.SCHOOL.COLOR);
-        school.drawRect(
-            CONFIG.SCHOOL.X,
-            CONFIG.SCHOOL.Y,
-            CONFIG.SCHOOL.WIDTH,
-            CONFIG.SCHOOL.HEIGHT
-        );
+        school.drawRect(x, y, w, h);
+        school.endFill();
+
+        // Darker brick pattern
+        school.beginFill(0x660000);
+        for (let py = y + 10; py < y + h; py += 20) {
+            for (let px = x + 10; px < x + w; px += 30) {
+                school.drawRect(px, py, 25, 8);
+            }
+        }
+        school.endFill();
+
+        // Windows (blue/glass)
+        const windowColor = 0x87CEEB;
+        school.beginFill(windowColor);
+        // Row 1
+        school.drawRect(x + 20, y + 40, 30, 40);
+        school.drawRect(x + 60, y + 40, 30, 40);
+        school.drawRect(x + 100, y + 40, 30, 40);
+        // Row 2
+        school.drawRect(x + 20, y + 100, 30, 40);
+        school.drawRect(x + 60, y + 100, 30, 40);
+        school.drawRect(x + 100, y + 100, 30, 40);
+        // Row 3
+        school.drawRect(x + 20, y + 160, 30, 40);
+        school.drawRect(x + 60, y + 160, 30, 40);
+        school.drawRect(x + 100, y + 160, 30, 40);
+        school.endFill();
+
+        // Door (brown)
+        school.beginFill(0x654321);
+        school.drawRect(x + 55, y + 220, 40, 70);
+        school.endFill();
+
+        // Door handle
+        school.beginFill(0xFFD700);
+        school.drawRect(x + 85, y + 255, 4, 4);
+        school.endFill();
+
+        // Roof (dark gray)
+        school.beginFill(0x333333);
+        school.drawRect(x - 10, y - 20, w + 20, 25);
+        school.endFill();
+
+        // Chimney
+        school.beginFill(CONFIG.SCHOOL.COLOR);
+        school.drawRect(x + 110, y - 40, 20, 25);
         school.endFill();
 
         // Add "SCHOOL" text
         const text = new PIXI.Text('SCHOOL', {
             fontFamily: CONFIG.UI.FONT_FAMILY,
-            fontSize: 24,
+            fontSize: 20,
             fill: 0xffffff,
-            align: 'center'
+            align: 'center',
+            fontWeight: 'bold',
+            stroke: 0x000000,
+            strokeThickness: 3
         });
         text.anchor.set(0.5);
-        text.x = CONFIG.SCHOOL.X + CONFIG.SCHOOL.WIDTH / 2;
-        text.y = CONFIG.SCHOOL.Y + CONFIG.SCHOOL.HEIGHT / 2;
+        text.x = x + w / 2;
+        text.y = y + 15;
 
         this.obstaclesLayer.addChild(school);
         this.obstaclesLayer.addChild(text);
@@ -357,6 +440,9 @@ class Game {
     startGame() {
         console.log('Game starting...');
 
+        // Initialize audio (requires user interaction)
+        this.audio.init();
+
         this.state = GAME_STATE.PLAYING;
         this.winner = WINNER.NONE;
         this.timeRemaining = CONFIG.GAME.MATCH_DURATION;
@@ -369,8 +455,8 @@ class Game {
         this.uiLayer.removeChildren();
 
         // Initialize game objects
-        this.teacher = new Teacher(this.gameLayer);
-        this.pupil = new Pupil(this.gameLayer, this.input);
+        this.teacher = new Teacher(this.gameLayer, this.audio);
+        this.pupil = new Pupil(this.gameLayer, this.input, this.audio);
         this.projectiles = []; // Array to track active eggs
         this.splats = []; // Array to track egg splats
         this.screenShake = null;
@@ -573,6 +659,10 @@ class Game {
         // Get hit position
         const hitPos = egg.getPosition();
 
+        // Play hit sounds
+        this.audio.playSound('eggHit');
+        this.audio.playSound('eggSplat');
+
         // Create visual effects
         this.createSplat(hitPos.x, hitPos.y);
         this.createScreenShake(15, 0.4); // Stronger shake for teacher hit
@@ -649,6 +739,13 @@ class Game {
     endGame(winner) {
         this.state = GAME_STATE.GAME_OVER;
         this.winner = winner;
+
+        // Play win sound
+        if (winner === WINNER.TEACHER) {
+            this.audio.playSound('teacherWin');
+        } else {
+            this.audio.playSound('pupilWin');
+        }
 
         // Clear UI (including all UI elements)
         this.uiLayer.removeChildren();

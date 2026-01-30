@@ -65,14 +65,26 @@ class Projectile {
     }
 
     /**
-     * Create egg sprite
+     * Create pixel art egg sprite
      */
     createSprite() {
         const graphics = new PIXI.Graphics();
 
-        // Draw egg (small yellow circle)
+        // Draw egg shape (oval with pixel art style)
+        // Main egg body (cream/white)
         graphics.beginFill(CONFIG.COLORS.EGG);
-        graphics.drawCircle(0, 0, CONFIG.EGG.HITBOX_RADIUS);
+        graphics.drawRect(-5, -6, 10, 12); // Vertical oval
+        graphics.drawRect(-6, -4, 12, 8);  // Middle section wider
+        graphics.endFill();
+
+        // Darker outline for definition
+        graphics.beginFill(0xFFEEAA);
+        graphics.drawRect(-4, -5, 8, 10);
+        graphics.endFill();
+
+        // Highlight (white spot)
+        graphics.beginFill(0xFFFFFF);
+        graphics.drawRect(-2, -4, 3, 3);
         graphics.endFill();
 
         this.sprite = graphics;

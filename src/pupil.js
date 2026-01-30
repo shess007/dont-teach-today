@@ -1,9 +1,10 @@
 // RECESS REVENGE - Pupil (Player 2)
 
 class Pupil {
-    constructor(container, input) {
+    constructor(container, input, audio = null) {
         this.container = container;
         this.input = input;
+        this.audio = audio;
 
         // Egg inventory
         this.eggCount = CONFIG.PUPIL.STARTING_EGGS;
@@ -207,6 +208,11 @@ class Pupil {
         this.canThrow = false;
         this.throwCooldown = CONFIG.PUPIL.EGG_COOLDOWN;
 
+        // Play throw sound
+        if (this.audio) {
+            this.audio.playSound('eggThrow');
+        }
+
         console.log(`Egg thrown! ${this.eggCount} eggs remaining`);
 
         return projectile;
@@ -257,6 +263,11 @@ class Pupil {
         const eggsToAdd = CONFIG.PUPIL.REFILL_AMOUNT;
         const eggsAdded = Math.min(eggsToAdd, this.maxEggs - this.eggCount);
         this.eggCount += eggsAdded;
+
+        // Play refill sound
+        if (this.audio) {
+            this.audio.playSound('refill');
+        }
 
         console.log(`Refill complete! +${eggsAdded} egg(s). Total: ${this.eggCount}/${this.maxEggs}`);
     }

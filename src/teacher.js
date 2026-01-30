@@ -1,8 +1,9 @@
 // RECESS REVENGE - Teacher (Player 1)
 
 class Teacher {
-    constructor(container) {
+    constructor(container, audio = null) {
         this.container = container;
+        this.audio = audio;
 
         // Position and movement
         this.x = CONFIG.TEACHER.SPAWN_X;
@@ -27,20 +28,43 @@ class Teacher {
     }
 
     /**
-     * Create placeholder sprite (blue circle)
+     * Create pixel art teacher sprite
      */
     createSprite() {
-        // Use legacy Graphics API for compatibility (will show deprecation warning but works)
         const graphics = new PIXI.Graphics();
 
-        // Draw main body (blue circle)
-        graphics.beginFill(CONFIG.COLORS.TEACHER);
-        graphics.drawCircle(0, 0, CONFIG.TEACHER.HITBOX_RADIUS);
+        // Simple pixel art person shape
+        // Head (tan/skin color)
+        graphics.beginFill(0xFFCC99);
+        graphics.drawRect(-4, -10, 8, 8);
         graphics.endFill();
 
-        // Add a direction indicator (small white circle)
-        graphics.beginFill(0xffffff);
-        graphics.drawCircle(CONFIG.TEACHER.HITBOX_RADIUS / 2, 0, 4);
+        // Body (blue shirt)
+        graphics.beginFill(CONFIG.COLORS.TEACHER);
+        graphics.drawRect(-6, -2, 12, 10);
+        graphics.endFill();
+
+        // Arms (blue)
+        graphics.beginFill(CONFIG.COLORS.TEACHER);
+        graphics.drawRect(-8, 0, 2, 6); // Left arm
+        graphics.drawRect(6, 0, 2, 6);  // Right arm
+        graphics.endFill();
+
+        // Legs (dark pants)
+        graphics.beginFill(0x333333);
+        graphics.drawRect(-5, 8, 4, 6);  // Left leg
+        graphics.drawRect(1, 8, 4, 6);   // Right leg
+        graphics.endFill();
+
+        // Briefcase (brown) - held in right hand
+        graphics.beginFill(0x8B4513);
+        graphics.drawRect(8, 4, 4, 6);
+        graphics.endFill();
+
+        // Eyes/face detail
+        graphics.beginFill(0x000000);
+        graphics.drawRect(-3, -8, 2, 2); // Left eye
+        graphics.drawRect(1, -8, 2, 2);  // Right eye
         graphics.endFill();
 
         this.sprite = graphics;
@@ -205,6 +229,12 @@ class Teacher {
         this.isSprinting = true;
         this.sprintTimer = CONFIG.TEACHER.SPRINT_DURATION;
         this.sprintAvailable = false;
+
+        // Play sprint sound
+        if (this.audio) {
+            this.audio.playSound('sprint');
+        }
+
         console.log('Sprint started!');
     }
 
