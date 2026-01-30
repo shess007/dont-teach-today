@@ -21,6 +21,9 @@ class Game {
 
         // UI elements
         this.timerText = null;
+        this.eggCountText = null;
+        this.sprintMeterGraphics = null;
+        this.sprintMeterText = null;
 
         // Note: init() is called separately since it's async
     }
@@ -192,6 +195,120 @@ class Game {
     }
 
     /**
+     * Create egg count display for pupil
+     */
+    createEggCountDisplay() {
+        this.eggCountText = new PIXI.Text('', {
+            fontFamily: CONFIG.UI.FONT_FAMILY,
+            fontSize: CONFIG.UI.FONT_SIZE_MEDIUM,
+            fill: 0xffffff,
+            align: 'right',
+            fontWeight: 'bold',
+            stroke: 0x000000,
+            strokeThickness: 3
+        });
+        this.eggCountText.anchor.set(1, 0);
+        this.eggCountText.x = CONFIG.SCREEN.WIDTH - 20;
+        this.eggCountText.y = 20;
+        this.uiLayer.addChild(this.eggCountText);
+
+        // Update immediately
+        this.updateEggCountDisplay();
+    }
+
+    /**
+     * Update egg count display
+     */
+    updateEggCountDisplay() {
+        if (!this.eggCountText || !this.pupil) return;
+
+        const eggCount = this.pupil.getEggCount();
+        const maxEggs = this.pupil.maxEggs;
+        this.eggCountText.text = `Eggs: ${eggCount}/${maxEggs}`;
+
+        // Change color based on egg count
+        if (eggCount === 0) {
+            this.eggCountText.fill = 0xff0000; // Red when empty
+        } else if (eggCount === 1) {
+            this.eggCountText.fill = 0xffaa00; // Orange when low
+        } else {
+            this.eggCountText.fill = 0xffffff; // White normally
+        }
+    }
+
+    /**
+     * Create sprint meter for teacher
+     */
+    createSprintMeter() {
+        // Create graphics for sprint meter bar
+        this.sprintMeterGraphics = new PIXI.Graphics();
+        this.uiLayer.addChild(this.sprintMeterGraphics);
+
+        // Create text label
+        this.sprintMeterText = new PIXI.Text('SPRINT', {
+            fontFamily: CONFIG.UI.FONT_FAMILY,
+            fontSize: CONFIG.UI.FONT_SIZE_SMALL,
+            fill: 0xffffff,
+            align: 'left',
+            fontWeight: 'bold',
+            stroke: 0x000000,
+            strokeThickness: 3
+        });
+        this.sprintMeterText.anchor.set(0, 0);
+        this.sprintMeterText.x = 20;
+        this.sprintMeterText.y = 20;
+        this.uiLayer.addChild(this.sprintMeterText);
+
+        // Update immediately
+        this.updateSprintMeter();
+    }
+
+    /**
+     * Update sprint meter display
+     */
+    updateSprintMeter() {
+        if (!this.sprintMeterGraphics || !this.teacher) return;
+
+        const status = this.teacher.getSprintStatus();
+        const meterX = 20;
+        const meterY = 55;
+        const meterWidth = 150;
+        const meterHeight = 20;
+
+        // Clear previous graphics
+        this.sprintMeterGraphics.clear();
+
+        // Draw background
+        this.sprintMeterGraphics.beginFill(0x000000, 0.5);
+        this.sprintMeterGraphics.drawRect(meterX, meterY, meterWidth, meterHeight);
+        this.sprintMeterGraphics.endFill();
+
+        // Draw border
+        this.sprintMeterGraphics.lineStyle(2, 0xffffff, 1);
+        this.sprintMeterGraphics.drawRect(meterX, meterY, meterWidth, meterHeight);
+
+        // Draw fill based on status
+        if (status.sprinting) {
+            // Show sprint duration remaining (green, depleting)
+            const fillWidth = meterWidth * status.durationPercent;
+            this.sprintMeterGraphics.beginFill(0x00ff00, 0.8);
+            this.sprintMeterGraphics.drawRect(meterX + 2, meterY + 2, fillWidth - 4, meterHeight - 4);
+            this.sprintMeterGraphics.endFill();
+        } else if (!status.available) {
+            // Show cooldown progress (red, filling up)
+            const fillWidth = meterWidth * (1 - status.cooldownPercent);
+            this.sprintMeterGraphics.beginFill(0xff0000, 0.8);
+            this.sprintMeterGraphics.drawRect(meterX + 2, meterY + 2, fillWidth - 4, meterHeight - 4);
+            this.sprintMeterGraphics.endFill();
+        } else {
+            // Sprint available (full yellow)
+            this.sprintMeterGraphics.beginFill(0xffff00, 0.8);
+            this.sprintMeterGraphics.drawRect(meterX + 2, meterY + 2, meterWidth - 4, meterHeight - 4);
+            this.sprintMeterGraphics.endFill();
+        }
+    }
+
+    /**
      * Show start screen
      */
     showStartScreen() {
@@ -257,8 +374,10 @@ class Game {
         this.collisionManager = new CollisionManager();
         this.obstacles = createObstacles(this.obstaclesLayer);
 
-        // Create timer display
+        // Create UI displays
         this.createTimerDisplay();
+        this.createEggCountDisplay();
+        this.createSprintMeter();
 
         console.log('Game started! Use WASD to move teacher, Mouse to aim and click to throw eggs!');
     }
@@ -307,8 +426,10 @@ class Game {
         // Update timer
         this.timeRemaining -= deltaTime;
 
-        // Update timer display
+        // Update UI displays
         this.updateTimerDisplay();
+        this.updateEggCountDisplay();
+        this.updateSprintMeter();
 
         // Check for time up
         if (this.timeRemaining <= 0) {
@@ -462,9 +583,12 @@ class Game {
         this.state = GAME_STATE.GAME_OVER;
         this.winner = winner;
 
-        // Clear UI (including timer)
+        // Clear UI (including all UI elements)
         this.uiLayer.removeChildren();
         this.timerText = null;
+        this.eggCountText = null;
+        this.sprintMeterGraphics = null;
+        this.sprintMeterText = null;
 
         // Show winner
         const winnerText = winner === WINNER.TEACHER
