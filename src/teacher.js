@@ -53,7 +53,7 @@ class Teacher {
     /**
      * Update teacher state
      */
-    update(deltaTime, input) {
+    update(deltaTime, input, obstacles = []) {
         // Update invulnerability timer
         if (this.isInvulnerable) {
             this.invulnerabilityTimer -= deltaTime;
@@ -82,9 +82,27 @@ class Teacher {
         this.velocityX = direction.x * speed;
         this.velocityY = direction.y * speed;
 
-        // Update position
-        this.x += this.velocityX * deltaTime;
-        this.y += this.velocityY * deltaTime;
+        // Calculate next position
+        let nextX = this.x + this.velocityX * deltaTime;
+        let nextY = this.y + this.velocityY * deltaTime;
+
+        // Check obstacle collision at next position
+        let canMove = true;
+        for (const obstacle of obstacles) {
+            if (Utils.circleRectCollision(
+                nextX, nextY, CONFIG.TEACHER.HITBOX_RADIUS,
+                obstacle.x, obstacle.y, obstacle.width, obstacle.height
+            )) {
+                canMove = false;
+                break;
+            }
+        }
+
+        // Apply movement if no collision
+        if (canMove) {
+            this.x = nextX;
+            this.y = nextY;
+        }
 
         // Boundary collision - keep teacher on screen
         this.x = Utils.clamp(

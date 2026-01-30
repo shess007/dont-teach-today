@@ -206,7 +206,7 @@ class Game {
         this.pupil = new Pupil(this.gameLayer, this.input);
         this.projectiles = []; // Array to track active eggs
         this.collisionManager = new CollisionManager();
-        // this.obstacles = createObstacles(this.obstaclesLayer); // Phase 7
+        this.obstacles = createObstacles(this.obstaclesLayer);
 
         console.log('Game started! Use WASD to move teacher, Mouse to aim and click to throw eggs!');
     }
@@ -264,7 +264,7 @@ class Game {
 
         // Update game objects
         if (this.teacher) {
-            this.teacher.update(deltaTime, this.input);
+            this.teacher.update(deltaTime, this.input, this.obstacles);
 
             // Check if teacher reached the goal
             if (this.teacher.hasReachedGoal()) {
