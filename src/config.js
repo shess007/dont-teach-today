@@ -11,17 +11,18 @@ const CONFIG = {
 
     // Game timing
     GAME: {
-        MATCH_DURATION: 120, // seconds
+        MATCH_DURATION: 90, // seconds (reduced for more intense matches)
         FPS: 60,
-        RESPAWN_INVULNERABILITY: 1.0 // seconds
+        RESPAWN_INVULNERABILITY: 1.5, // seconds (increased recovery time)
+        DEBUG_MODE: false // Set to true to enable debug console logs
     },
 
     // Teacher (Player 1) settings
     TEACHER: {
-        SPEED: 160, // pixels per second
-        SPRINT_SPEED_MULTIPLIER: 1.65,
+        SPEED: 140, // pixels per second (reduced for balance)
+        SPRINT_SPEED_MULTIPLIER: 1.6, // (slightly reduced)
         SPRINT_DURATION: 0.8, // seconds
-        SPRINT_COOLDOWN: 5.0, // seconds
+        SPRINT_COOLDOWN: 6.0, // seconds (increased for more strategic use)
         SIZE: 32, // sprite size
         HITBOX_RADIUS: 16,
         SPAWN_X: 100,
@@ -31,16 +32,16 @@ const CONFIG = {
 
     // Pupil (Player 2) settings
     PUPIL: {
-        STARTING_EGGS: 3,
-        MAX_EGGS: 3,
-        EGG_COOLDOWN: 1.0, // seconds between throws
+        STARTING_EGGS: 5, // increased for more coverage
+        MAX_EGGS: 5, // increased to match
+        EGG_COOLDOWN: 0.8, // seconds between throws (faster shooting)
         REFILL_DELAY: 0.75, // seconds at chicken coop
-        REFILL_AMOUNT: 1
+        REFILL_AMOUNT: 2 // refill 2 eggs at a time (makes coop more valuable)
     },
 
     // Projectile settings
     EGG: {
-        SPEED: 1600, // pixels per second (increased for faster flight)
+        SPEED: 1200, // pixels per second (reduced to make aiming more skillful)
         ARC_HEIGHT: 100, // pixels - how high the arc goes
         SIZE: 16,
         HITBOX_RADIUS: 8,

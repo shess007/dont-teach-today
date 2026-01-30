@@ -4,7 +4,7 @@ An asymmetric 2-player local multiplayer browser game built with PixiJS.
 
 ## Current Status
 
-**Phase 1-2 Complete:** Basic infrastructure and game loop implemented.
+**All Phases Complete!** The game is fully playable with all features implemented, balanced, and polished.
 
 ## How to Run
 
@@ -16,13 +16,19 @@ An asymmetric 2-player local multiplayer browser game built with PixiJS.
 
 ### Player 1 - Teacher
 - **WASD** or **Arrow Keys**: Move in all directions
-- **SHIFT**: Sprint (will be implemented in Phase 5)
-- **Goal**: Reach the school building on the right side
+- **SHIFT**: Sprint for a burst of speed (limited duration with cooldown)
+- **Goal**: Reach the school building on the right side before time runs out
+- **Special**: Hide in bushes to become invisible to eggs!
 
 ### Player 2 - Pupil
-- **Mouse**: Aim crosshair (will be implemented in Phase 4)
-- **Left Click**: Throw egg (will be implemented in Phase 4)
-- **Goal**: Prevent the teacher from reaching the school
+- **Mouse**: Aim crosshair with trajectory preview
+- **Left Click**: Throw egg at the teacher
+- **Click Chicken Coop**: Refill eggs (holds 5 eggs, refills 2 at a time)
+- **Goal**: Stop the teacher by hitting them with eggs before they reach school
+
+### General
+- **SPACE**: Start game / Restart after game over
+- **ESC**: Pause / Resume game
 
 ## Development Progress
 
@@ -36,17 +42,18 @@ An asymmetric 2-player local multiplayer browser game built with PixiJS.
 - [x] Phase 8: Hiding mechanics in bushes
 - [x] Phase 9: Timer system and win/lose conditions
 - [x] Phase 10: Chicken coop egg refill system
-- [ ] Phase 11: UI elements (timer, egg count, sprint meter)
-- [ ] Phase 12: Visual feedback (splats, screen shake, effects)
-- [ ] Phase 13: Pixel art assets (placeholder to final)
-- [ ] Phase 14: Audio integration (music and sound effects)
-- [ ] Phase 15: Game state management (start, playing, end screens)
-- [ ] Phase 16: Balance tuning and playtesting
-- [ ] Phase 17: Polish and optimization
+- [x] Phase 11: UI elements (timer, egg count, sprint meter)
+- [x] Phase 12: Visual feedback (splats, screen shake, effects)
+- [x] Phase 13: Pixel art assets (placeholder to final)
+- [x] Phase 14: Audio integration (music and sound effects)
+- [x] Phase 15: Game state management (start, playing, end screens)
+- [x] Phase 16: Balance tuning and playtesting
+- [x] Phase 17: Polish and optimization
 
 ## Technology Stack
 
-- **PixiJS 7.x**: High-performance 2D rendering
+- **PixiJS 8.x**: High-performance 2D rendering with WebGL
+- **Web Audio API**: Procedurally generated sound effects
 - **Vanilla JavaScript**: No build process required
 - **HTML5 Canvas**: For rendering
 
@@ -73,9 +80,19 @@ recess-revenge/
 └── recess-revenge.md      # Game design document
 ```
 
-## Next Steps
+## Features
 
-Continue with Phase 3: Implement Teacher movement and controls.
+- **Asymmetric Gameplay**: Two players with completely different mechanics
+- **Sprint System**: Teacher can sprint with a cooldown timer
+- **Hiding Mechanic**: Teacher can hide in bushes to avoid eggs
+- **Egg Refill System**: Pupil must strategically visit the chicken coop
+- **Dynamic Obstacles**: Navigate around benches, trees, swing sets, and bushes
+- **Visual Effects**: Egg splats, screen shake, impact particles
+- **Audio**: Procedurally generated sound effects for all actions
+- **Pixel Art**: Custom pixel art graphics for all game elements
+- **UI**: Real-time display of timer, egg count, and sprint meter
+- **90-Second Matches**: Fast-paced, intense gameplay
+- **Balanced**: Carefully tuned for competitive play
 
 ## Game Design
 

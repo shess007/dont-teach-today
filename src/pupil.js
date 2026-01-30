@@ -104,13 +104,20 @@ class Pupil {
             this.crosshairSprite.x = this.crosshairX;
             this.crosshairSprite.y = this.crosshairY;
 
-            // Change color based on what we're hovering over
-            if (this.isClickingChickenCoop()) {
+            // Change color and scale based on state
+            if (this.isRefilling) {
+                // Pulse effect during refill
+                const pulse = Math.sin(Date.now() / 100) * 0.2 + 1.0;
+                this.crosshairSprite.scale.set(pulse);
+                this.crosshairSprite.tint = 0x00ff00; // Green during refill
+            } else if (this.isClickingChickenCoop()) {
                 // Green when over chicken coop (can refill)
                 this.crosshairSprite.tint = this.eggCount >= this.maxEggs ? 0xaaaaaa : 0x00ff00;
+                this.crosshairSprite.scale.set(1.0);
             } else {
-                // Red when aiming to throw
+                // Normal white when aiming
                 this.crosshairSprite.tint = 0xffffff;
+                this.crosshairSprite.scale.set(1.0);
             }
         }
 
@@ -186,12 +193,12 @@ class Pupil {
     tryThrowEgg() {
         // Check if we can throw
         if (!this.canThrow) {
-            console.log('Egg throw on cooldown');
+            Utils.log('Egg throw on cooldown');
             return null;
         }
 
         if (this.eggCount <= 0) {
-            console.log('No eggs left!');
+            Utils.log('No eggs left!');
             return null;
         }
 
@@ -213,7 +220,7 @@ class Pupil {
             this.audio.playSound('eggThrow');
         }
 
-        console.log(`Egg thrown! ${this.eggCount} eggs remaining`);
+        Utils.log(`Egg thrown! ${this.eggCount} eggs remaining`);
 
         return projectile;
     }
@@ -237,19 +244,19 @@ class Pupil {
     startRefill() {
         // Can't refill if already full or already refilling
         if (this.eggCount >= this.maxEggs) {
-            console.log('Eggs already full!');
+            Utils.log('Eggs already full!');
             return;
         }
 
         if (this.isRefilling) {
-            console.log('Already refilling...');
+            Utils.log('Already refilling...');
             return;
         }
 
         // Start refill timer
         this.isRefilling = true;
         this.refillTimer = CONFIG.PUPIL.REFILL_DELAY;
-        console.log('Refilling eggs at chicken coop...');
+        Utils.log('Refilling eggs at chicken coop...');
     }
 
     /**
@@ -269,7 +276,7 @@ class Pupil {
             this.audio.playSound('refill');
         }
 
-        console.log(`Refill complete! +${eggsAdded} egg(s). Total: ${this.eggCount}/${this.maxEggs}`);
+        Utils.log(`Refill complete! +${eggsAdded} egg(s). Total: ${this.eggCount}/${this.maxEggs}`);
     }
 
     /**
@@ -278,7 +285,7 @@ class Pupil {
     addEgg() {
         if (this.eggCount < this.maxEggs) {
             this.eggCount++;
-            console.log(`Egg refilled! ${this.eggCount}/${this.maxEggs} eggs`);
+            Utils.log(`Egg refilled! ${this.eggCount}/${this.maxEggs} eggs`);
             return true;
         }
         return false;

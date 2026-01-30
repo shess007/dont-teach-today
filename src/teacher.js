@@ -235,7 +235,7 @@ class Teacher {
             this.audio.playSound('sprint');
         }
 
-        console.log('Sprint started!');
+        Utils.log('Sprint started!');
     }
 
     /**
@@ -245,7 +245,7 @@ class Teacher {
         this.isSprinting = false;
         this.sprintTimer = 0;
         this.sprintCooldownTimer = CONFIG.TEACHER.SPRINT_COOLDOWN;
-        console.log('Sprint ended, cooldown started');
+        Utils.log('Sprint ended, cooldown started');
     }
 
     /**
@@ -281,7 +281,7 @@ class Teacher {
         this.sprite.x = this.x;
         this.sprite.y = this.y;
 
-        console.log('Teacher respawned at starting position');
+        Utils.log('Teacher respawned at starting position');
     }
 
     /**

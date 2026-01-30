@@ -2,6 +2,15 @@
 
 const Utils = {
     /**
+     * Debug logging (only logs if DEBUG_MODE is enabled)
+     */
+    log(...args) {
+        if (CONFIG.GAME.DEBUG_MODE) {
+            console.log(...args);
+        }
+    },
+
+    /**
      * Calculate distance between two points
      */
     distance(x1, y1, x2, y2) {

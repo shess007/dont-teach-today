@@ -237,7 +237,7 @@ class Game {
      * Create timer display for gameplay
      */
     createTimerDisplay() {
-        // Create timer text
+        // Create timer text with drop shadow for better visibility
         this.timerText = new PIXI.Text('', {
             fontFamily: CONFIG.UI.FONT_FAMILY,
             fontSize: CONFIG.UI.FONT_SIZE_LARGE,
@@ -245,7 +245,11 @@ class Game {
             align: 'center',
             fontWeight: 'bold',
             stroke: 0x000000,
-            strokeThickness: 4
+            strokeThickness: 4,
+            dropShadow: true,
+            dropShadowColor: 0x000000,
+            dropShadowBlur: 6,
+            dropShadowDistance: 3
         });
         this.timerText.anchor.set(0.5, 0);
         this.timerText.x = CONFIG.SCREEN.WIDTH / 2;
@@ -257,7 +261,7 @@ class Game {
     }
 
     /**
-     * Update timer display text
+     * Update timer display text with visual effects
      */
     updateTimerDisplay() {
         if (!this.timerText) return;
@@ -268,13 +272,18 @@ class Game {
 
         this.timerText.text = timeString;
 
-        // Change color based on remaining time
+        // Change color based on remaining time with pulse effect
         if (this.timeRemaining <= 10) {
             this.timerText.fill = 0xff0000; // Red when low
+            // Pulse effect when time is critical
+            const pulse = Math.sin(Date.now() / 200) * 0.3 + 1.0;
+            this.timerText.scale.set(pulse);
         } else if (this.timeRemaining <= 30) {
             this.timerText.fill = 0xffaa00; // Orange warning
+            this.timerText.scale.set(1.0); // Reset scale
         } else {
             this.timerText.fill = 0xffffff; // White normally
+            this.timerText.scale.set(1.0); // Reset scale
         }
     }
 
@@ -289,7 +298,11 @@ class Game {
             align: 'right',
             fontWeight: 'bold',
             stroke: 0x000000,
-            strokeThickness: 3
+            strokeThickness: 3,
+            dropShadow: true,
+            dropShadowColor: 0x000000,
+            dropShadowBlur: 4,
+            dropShadowDistance: 2
         });
         this.eggCountText.anchor.set(1, 0);
         this.eggCountText.x = CONFIG.SCREEN.WIDTH - 20;
@@ -328,7 +341,7 @@ class Game {
         this.sprintMeterGraphics = new PIXI.Graphics();
         this.uiLayer.addChild(this.sprintMeterGraphics);
 
-        // Create text label
+        // Create text label with drop shadow
         this.sprintMeterText = new PIXI.Text('SPRINT', {
             fontFamily: CONFIG.UI.FONT_FAMILY,
             fontSize: CONFIG.UI.FONT_SIZE_SMALL,
@@ -336,7 +349,11 @@ class Game {
             align: 'left',
             fontWeight: 'bold',
             stroke: 0x000000,
-            strokeThickness: 3
+            strokeThickness: 3,
+            dropShadow: true,
+            dropShadowColor: 0x000000,
+            dropShadowBlur: 4,
+            dropShadowDistance: 2
         });
         this.sprintMeterText.anchor.set(0, 0);
         this.sprintMeterText.x = 20;
@@ -399,20 +416,26 @@ class Game {
         // Clear UI layer
         this.uiLayer.removeChildren();
 
-        // Title
+        // Title with drop shadow for better visibility
         const title = new PIXI.Text('RECESS REVENGE', {
             fontFamily: CONFIG.UI.FONT_FAMILY,
-            fontSize: CONFIG.UI.FONT_SIZE_LARGE,
-            fill: 0xffffff,
+            fontSize: CONFIG.UI.FONT_SIZE_LARGE + 20, // Larger title
+            fill: 0xffff00, // Yellow for emphasis
             align: 'center',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            stroke: 0x000000,
+            strokeThickness: 6,
+            dropShadow: true,
+            dropShadowColor: 0x000000,
+            dropShadowBlur: 8,
+            dropShadowDistance: 4
         });
         title.anchor.set(0.5);
         title.x = CONFIG.SCREEN.WIDTH / 2;
-        title.y = 150;
+        title.y = 120;
         this.uiLayer.addChild(title);
 
-        // Instructions
+        // Instructions with better readability
         const instructions = new PIXI.Text(
             'Player 1 (Teacher): WASD/Arrows + SHIFT to sprint\n' +
             'Player 2 (Pupil): Mouse to aim, Click to throw eggs\n' +
@@ -425,7 +448,13 @@ class Game {
                 fontSize: CONFIG.UI.FONT_SIZE_SMALL,
                 fill: 0xffffff,
                 align: 'center',
-                lineHeight: 30
+                lineHeight: 30,
+                stroke: 0x000000,
+                strokeThickness: 3,
+                dropShadow: true,
+                dropShadowColor: 0x000000,
+                dropShadowBlur: 4,
+                dropShadowDistance: 2
             }
         );
         instructions.anchor.set(0.5);
@@ -438,7 +467,7 @@ class Game {
      * Start the game
      */
     startGame() {
-        console.log('Game starting...');
+        Utils.log('Game starting...');
 
         // Initialize audio (requires user interaction)
         this.audio.init();
@@ -468,7 +497,7 @@ class Game {
         this.createEggCountDisplay();
         this.createSprintMeter();
 
-        console.log('Game started! Use WASD to move teacher, Mouse to aim and click to throw eggs!');
+        Utils.log('Game started! Use WASD to move teacher, Mouse to aim and click to throw eggs!');
     }
 
     /**
@@ -654,7 +683,7 @@ class Game {
      * Handle when an egg hits the teacher
      */
     handleEggHit(egg) {
-        console.log('Teacher hit by egg!');
+        Utils.log('Teacher hit by egg!');
 
         // Get hit position
         const hitPos = egg.getPosition();
@@ -710,8 +739,15 @@ class Game {
         const pauseText = new PIXI.Text('PAUSED\nPress ESC to resume', {
             fontFamily: CONFIG.UI.FONT_FAMILY,
             fontSize: CONFIG.UI.FONT_SIZE_LARGE,
-            fill: 0xffffff,
-            align: 'center'
+            fill: 0xffff00, // Yellow for visibility
+            align: 'center',
+            fontWeight: 'bold',
+            stroke: 0x000000,
+            strokeThickness: 6,
+            dropShadow: true,
+            dropShadowColor: 0x000000,
+            dropShadowBlur: 8,
+            dropShadowDistance: 4
         });
         pauseText.anchor.set(0.5);
         pauseText.x = CONFIG.SCREEN.WIDTH / 2;
@@ -754,16 +790,25 @@ class Game {
         this.sprintMeterGraphics = null;
         this.sprintMeterText = null;
 
-        // Show winner
+        // Show winner with color-coded styling
         const winnerText = winner === WINNER.TEACHER
             ? 'TEACHER WINS!\nReached the school!'
             : 'PUPIL WINS!\nTime ran out!';
 
+        const winnerColor = winner === WINNER.TEACHER ? 0x3498db : 0xffd700; // Blue for teacher, gold for pupil
+
         const text = new PIXI.Text(winnerText + '\n\nPress SPACE to play again', {
             fontFamily: CONFIG.UI.FONT_FAMILY,
             fontSize: CONFIG.UI.FONT_SIZE_LARGE,
-            fill: 0xffffff,
-            align: 'center'
+            fill: winnerColor,
+            align: 'center',
+            fontWeight: 'bold',
+            stroke: 0x000000,
+            strokeThickness: 6,
+            dropShadow: true,
+            dropShadowColor: 0x000000,
+            dropShadowBlur: 10,
+            dropShadowDistance: 5
         });
         text.anchor.set(0.5);
         text.x = CONFIG.SCREEN.WIDTH / 2;

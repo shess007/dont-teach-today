@@ -287,6 +287,6 @@ function createObstacles(container) {
         obstacles.push(new Obstacle('SWING_SET', 750, 500, container));
     }
 
-    console.log(`Created ${obstacles.length} obstacles`);
+    Utils.log(`Created ${obstacles.length} obstacles`);
     return obstacles;
 }
