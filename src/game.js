@@ -54,6 +54,9 @@ class Game {
         // Create container layers for organized rendering
         this.createLayers();
 
+        // Preload obstacle PNG assets before creating obstacles
+        await preloadObstacleAssets();
+
         // Create placeholder graphics and UI
         this.createPlaceholderGraphics();
 

@@ -1,5 +1,19 @@
 // RECESS REVENGE - Obstacles
 
+// Textures loaded via preloadObstacleAssets()
+const TREE_TEXTURES = [];
+let BUSH_TEXTURE = null;
+
+async function preloadObstacleAssets() {
+    const treePaths = ['assets/models/tree1.png', 'assets/models/tree2.png'];
+    for (const path of treePaths) {
+        const texture = await PIXI.Assets.load(path);
+        TREE_TEXTURES.push(texture);
+    }
+    BUSH_TEXTURE = await PIXI.Assets.load('assets/models/bush1.png');
+    Utils.log(`Loaded ${TREE_TEXTURES.length} tree textures and bush texture`);
+}
+
 class Obstacle {
     constructor(type, x, y, container) {
         this.type = type;
@@ -23,33 +37,52 @@ class Obstacle {
      * Create pixel art obstacle sprite
      */
     createSprite() {
-        const graphics = new PIXI.Graphics();
+        if (this.type === 'BUSH' && BUSH_TEXTURE) {
+            // Use bush PNG texture, scaled proportionally to fit height
+            const sprite = new PIXI.Sprite(BUSH_TEXTURE);
+            const scale = this.height / BUSH_TEXTURE.height;
+            sprite.width = BUSH_TEXTURE.width * scale;
+            sprite.height = this.height;
+            this.width = sprite.width;
+            this.sprite = sprite;
+        } else if (this.type === 'TREE' && TREE_TEXTURES.length > 0) {
+            // Use a random tree PNG texture, scaled proportionally to fit height
+            const texture = TREE_TEXTURES[Math.floor(Math.random() * TREE_TEXTURES.length)];
+            const sprite = new PIXI.Sprite(texture);
+            const scale = this.height / texture.height;
+            sprite.width = texture.width * scale;
+            sprite.height = this.height;
+            // Update collision width to match the displayed sprite
+            this.width = sprite.width;
+            this.sprite = sprite;
+        } else {
+            const graphics = new PIXI.Graphics();
 
-        // Draw different sprites based on obstacle type
-        switch (this.type) {
-            case 'BUSH':
-                this.drawBush(graphics);
-                break;
-            case 'BENCH':
-                this.drawBench(graphics);
-                break;
-            case 'TREE':
-                this.drawTree(graphics);
-                break;
-            case 'SWING_SET':
-                this.drawSwingSet(graphics);
-                break;
-            case 'CHICKEN_COOP':
-                this.drawChickenCoop(graphics);
-                break;
-            default:
-                // Fallback: simple colored rectangle
-                graphics.beginFill(this.color);
-                graphics.drawRect(0, 0, this.width, this.height);
-                graphics.endFill();
+            switch (this.type) {
+                case 'BUSH':
+                    this.drawBush(graphics);
+                    break;
+                case 'BENCH':
+                    this.drawBench(graphics);
+                    break;
+                case 'TREE':
+                    this.drawTree(graphics);
+                    break;
+                case 'SWING_SET':
+                    this.drawSwingSet(graphics);
+                    break;
+                case 'CHICKEN_COOP':
+                    this.drawChickenCoop(graphics);
+                    break;
+                default:
+                    graphics.beginFill(this.color);
+                    graphics.drawRect(0, 0, this.width, this.height);
+                    graphics.endFill();
+            }
+
+            this.sprite = graphics;
         }
 
-        this.sprite = graphics;
         this.sprite.x = this.x;
         this.sprite.y = this.y;
 
