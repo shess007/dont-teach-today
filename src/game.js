@@ -205,6 +205,7 @@ class Game {
         this.teacher = new Teacher(this.gameLayer);
         this.pupil = new Pupil(this.gameLayer, this.input);
         this.projectiles = []; // Array to track active eggs
+        this.collisionManager = new CollisionManager();
         // this.obstacles = createObstacles(this.obstaclesLayer); // Phase 7
 
         console.log('Game started! Use WASD to move teacher, Mouse to aim and click to throw eggs!');
@@ -285,7 +286,8 @@ class Game {
         // Update all projectiles
         this.updateProjectiles(deltaTime);
 
-        // this.checkCollisions(); // Phase 6
+        // Check collisions between eggs and teacher
+        this.checkCollisions();
 
         // Check pause
         if (this.input.isPausePressed()) {
@@ -308,6 +310,43 @@ class Game {
                 this.projectiles.splice(i, 1);
             }
         }
+    }
+
+    /**
+     * Check collisions between game objects
+     */
+    checkCollisions() {
+        if (!this.teacher || !this.collisionManager) return;
+
+        // Check all projectiles against teacher
+        const hits = this.collisionManager.checkAllProjectileCollisions(
+            this.projectiles,
+            this.teacher
+        );
+
+        // Handle each hit
+        for (const egg of hits) {
+            this.handleEggHit(egg);
+        }
+    }
+
+    /**
+     * Handle when an egg hits the teacher
+     */
+    handleEggHit(egg) {
+        console.log('Teacher hit by egg!');
+
+        // Respawn teacher at starting position
+        this.teacher.respawn();
+
+        // Remove the egg
+        const index = this.projectiles.indexOf(egg);
+        if (index > -1) {
+            egg.destroy();
+            this.projectiles.splice(index, 1);
+        }
+
+        // TODO Phase 12: Add screen shake and splat effect
     }
 
     /**
