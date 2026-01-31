@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RECESS REVENGE - Chibi Teacher Spritesheet Generator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 {
+            text-shadow: 0 0 20px #00ffff, 0 0 30px #00ffff;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+        canvas {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button {
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow:
+                5px 5px 10px rgba(0, 0, 0, 0.3),
+                -2px -2px 10px rgba(255, 255, 255, 0.1);
+            text-shadow: 0 0 10px #00ffff;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow:
+                0 0 20px #00ffff,
+                5px 5px 15px rgba(0, 0, 0, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .info {
+            margin-top: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 600px;
+            backdrop-filter: blur(10px);
+        }
+        .info h3 {
+            margin-top: 0;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        #previewCanvas {
+            margin-top: 20px;
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+        .label {
+            margin-top: 10px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chibi Teacher Spritesheet Generator</h1>
+    <p class="subtitle">Classic Stern Teacher - Chibi Style for RECESS REVENGE</p>
+
+    <canvas id="spritesheetCanvas" width="384" height="192"></canvas>
+    <p class="label">Full Spritesheet (384x192)</p>
+
+    <canvas id="previewCanvas" width="256" height="256"></canvas>
+    <p class="label">Animation Preview (click to cycle animations)</p>
+
+    <div class="controls">
+        <button onclick="downloadSpritesheet()">Download Spritesheet PNG</button>
+        <button onclick="regenerate()">Regenerate</button>
+    </div>
+
+    <div class="info">
+        <h3>Spritesheet Layout</h3>
+        <p>
+            <strong>Row 0:</strong> Idle (4 frames @ 64x64)<br>
+            <strong>Row 1:</strong> Walk (6 frames @ 64x64)<br>
+            <strong>Row 2:</strong> Sprint (4 frames @ 64x64)
+        </p>
+        <p>
+            Total size: 384x192 pixels<br>
+            Save as: <code>teacher-spritesheet.png</code>
+        </p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('spritesheetCanvas');
+        const ctx = canvas.getContext('2d');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const previewCtx = previewCanvas.getContext('2d');
+
+        // Color palette matching game config
+        const COLORS = {
+            SKIN: '#FFCC99',
+            SHIRT: '#3498db',
+            TIE: '#2574A9',
+            PANTS: '#333333',
+            BRIEFCASE: '#8B4513',
+            BRIEFCASE_LOCK: '#FFD700',
+            GLASSES_FRAME: '#000000',
+            GLASSES_LENS: 'rgba(135, 206, 235, 0.3)',
+            EYES: '#000000',
+            MOUTH: '#000000',
+            SHOES: '#1a1a1a',
+            HAIR: '#4a4a4a'
+        };
+
+        // Animation preview state
+        let previewAnimIndex = 0;
+        let previewFrame = 0;
+        let previewTime = 0;
+        const animations = ['idle', 'walk', 'sprint'];
+        const animFrameCounts = { idle: 4, walk: 6, sprint: 4 };
+        const animSpeeds = { idle: 200, walk: 150, sprint: 100 }; // ms per frame
+
+        // Draw chibi teacher at given position with animation frame
+        function drawTeacher(x, y, frame, animType = 'idle') {
+            ctx.save();
+            ctx.translate(x + 32, y + 32); // Center of 64x64 frame
+
+            // Chibi proportions: 2.5 heads tall
+            const headSize = 20;
+            const bodyHeight = 14;
+            const legLength = 8;
+
+            // Animation offsets
+            let bobOffset = 0;
+            let legSwing = 0;
+            let armSwing = 0;
+            let bodyLean = 0;
+
+            if (animType === 'idle') {
+                // Gentle bobbing - 4 frames spread across full cycle
+                const idlePhase = (frame / 4) * Math.PI * 2;
+                bobOffset = Math.sin(idlePhase) * 1.5;
+            } else if (animType === 'walk') {
+                // Walking cycle - 6 frames spread across full cycle
+                const walkPhase = (frame / 6) * Math.PI * 2;
+                bobOffset = Math.abs(Math.sin(walkPhase)) * 2;
+                legSwing = Math.sin(walkPhase) * 5;
+                armSwing = Math.sin(walkPhase) * 4;
+            } else if (animType === 'sprint') {
+                // Fast running - 4 frames spread across full cycle
+                const sprintPhase = (frame / 4) * Math.PI * 2;
+                bobOffset = Math.abs(Math.sin(sprintPhase)) * 3;
+                legSwing = Math.sin(sprintPhase) * 8;
+                armSwing = Math.sin(sprintPhase) * 6;
+                bodyLean = 4; // Lean forward when sprinting
+            }
+
+            // --- LEGS (drawn first, behind body) ---
+            ctx.fillStyle = COLORS.PANTS;
+
+            // Left leg
+            ctx.fillRect(-6 + legSwing, 8 + bobOffset, 5, legLength);
+            // Right leg
+            ctx.fillRect(1 - legSwing, 8 + bobOffset, 5, legLength);
+
+            // Shoes
+            ctx.fillStyle = COLORS.SHOES;
+            ctx.fillRect(-7 + legSwing, 15 + bobOffset, 6, 3);
+            ctx.fillRect(0 - legSwing, 15 + bobOffset, 6, 3);
+
+            // --- BODY ---
+            // Shirt
+            ctx.fillStyle = COLORS.SHIRT;
+            ctx.fillRect(-8 + bodyLean, -6 + bobOffset, 16, bodyHeight);
+
+            // Tie
+            ctx.fillStyle = COLORS.TIE;
+            ctx.fillRect(-1 + bodyLean, -4 + bobOffset, 2, 8);
+            ctx.fillRect(-2 + bodyLean, -5 + bobOffset, 4, 2);
+
+            // --- ARMS ---
+            ctx.fillStyle = COLORS.SHIRT;
+
+            // Left arm (swinging)
+            ctx.fillRect(-11 + bodyLean, -4 + bobOffset + armSwing, 3, 10);
+
+            // Right arm holding briefcase (less swing)
+            ctx.fillRect(8 + bodyLean, -4 + bobOffset - armSwing * 0.5, 3, 10);
+
+            // Briefcase
+            ctx.fillStyle = COLORS.BRIEFCASE;
+            ctx.fillRect(10 + bodyLean, 3 + bobOffset - armSwing * 0.5, 6, 8);
+            // Lock
+            ctx.fillStyle = COLORS.BRIEFCASE_LOCK;
+            ctx.fillRect(12 + bodyLean, 6 + bobOffset - armSwing * 0.5, 2, 2);
+
+            // --- HEAD (big chibi head!) ---
+            ctx.fillStyle = COLORS.SKIN;
+            ctx.fillRect(-10, -26 + bobOffset, headSize, headSize);
+
+            // Hair
+            ctx.fillStyle = COLORS.HAIR;
+            ctx.fillRect(-10, -26 + bobOffset, headSize, 4);
+            ctx.fillRect(-10, -26 + bobOffset, 3, 8);
+            ctx.fillRect(7, -26 + bobOffset, 3, 8);
+
+            // Glasses
+            ctx.fillStyle = COLORS.GLASSES_FRAME;
+            ctx.fillRect(-8, -18 + bobOffset, 7, 6); // Left frame
+            ctx.fillRect(1, -18 + bobOffset, 7, 6); // Right frame
+            ctx.fillRect(-1, -16 + bobOffset, 2, 2); // Bridge
+
+            // Lenses
+            ctx.fillStyle = COLORS.GLASSES_LENS;
+            ctx.fillRect(-7, -17 + bobOffset, 5, 4);
+            ctx.fillRect(2, -17 + bobOffset, 5, 4);
+
+            // Eyes behind glasses
+            ctx.fillStyle = COLORS.EYES;
+            ctx.fillRect(-6, -16 + bobOffset, 2, 2);
+            ctx.fillRect(3, -16 + bobOffset, 2, 2);
+
+            // Stern mouth
+            ctx.fillStyle = COLORS.MOUTH;
+            ctx.fillRect(-4, -10 + bobOffset, 6, 1);
+
+            ctx.restore();
+        }
+
+        // Generate the full spritesheet
+        function generateSpritesheet() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Row 0: Idle (4 frames)
+            for (let i = 0; i < 4; i++) {
+                drawTeacher(i * 64, 0, i, 'idle');
+            }
+
+            // Row 1: Walk (6 frames)
+            for (let i = 0; i < 6; i++) {
+                drawTeacher(i * 64, 64, i, 'walk');
+            }
+
+            // Row 2: Sprint (4 frames)
+            for (let i = 0; i < 4; i++) {
+                drawTeacher(i * 64, 128, i, 'sprint');
+            }
+
+            // Grid lines drawn on a separate overlay for visual reference only
+            // (not included in the downloaded spritesheet)
+        }
+
+        // Download spritesheet as PNG
+        function downloadSpritesheet() {
+            const link = document.createElement('a');
+            link.download = 'teacher-spritesheet.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Regenerate spritesheet
+        function regenerate() {
+            generateSpritesheet();
+            startPreview();
+        }
+
+        // Preview animation
+        function animatePreview() {
+            const currentAnim = animations[previewAnimIndex];
+            const frameCount = animFrameCounts[currentAnim];
+            const animSpeed = animSpeeds[currentAnim];
+
+            const now = Date.now();
+            if (now - previewTime > animSpeed) {
+                previewTime = now;
+                previewFrame = (previewFrame + 1) % frameCount;
+
+                // Clear preview canvas
+                previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+                // Draw background
+                previewCtx.fillStyle = 'rgba(58, 58, 58, 0.3)';
+                previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+                // Draw label
+                previewCtx.fillStyle = '#00ffff';
+                previewCtx.font = 'bold 20px Arial';
+                previewCtx.textAlign = 'center';
+                previewCtx.fillText(currentAnim.toUpperCase(), previewCanvas.width / 2, 30);
+
+                // Draw current frame scaled up 3x
+                previewCtx.save();
+                previewCtx.imageSmoothingEnabled = false;
+
+                const sourceX = previewFrame * 64;
+                const sourceY = previewAnimIndex * 64;
+                const scale = 3;
+                const destX = (previewCanvas.width - 64 * scale) / 2;
+                const destY = (previewCanvas.height - 64 * scale) / 2;
+
+                previewCtx.drawImage(
+                    canvas,
+                    sourceX, sourceY, 64, 64,
+                    destX, destY, 64 * scale, 64 * scale
+                );
+
+                previewCtx.restore();
+            }
+
+            requestAnimationFrame(animatePreview);
+        }
+
+        // Cycle through animations on click
+        previewCanvas.addEventListener('click', () => {
+            previewAnimIndex = (previewAnimIndex + 1) % animations.length;
+            previewFrame = 0;
+        });
+
+        // Start preview animation
+        function startPreview() {
+            previewTime = Date.now();
+            animatePreview();
+        }
+
+        // Initialize
+        generateSpritesheet();
+        startPreview();
+    </script>
+</body>
+</html>

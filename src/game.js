@@ -54,8 +54,9 @@ class Game {
         // Create container layers for organized rendering
         this.createLayers();
 
-        // Preload obstacle PNG assets before creating obstacles
+        // Preload asset textures before creating game objects
         await preloadObstacleAssets();
+        await preloadTeacherAssets();
 
         // Create placeholder graphics and UI
         this.createPlaceholderGraphics();
@@ -130,7 +131,7 @@ class Game {
         // Goal line (yellow dashed line on left)
         markings.beginFill(0xffff00, 0.9);
         for (let y = 0; y < CONFIG.SCREEN.HEIGHT; y += 40) {
-            markings.drawRect(CONFIG.TEACHER.SPAWN_X - 30, y, 5, 20);
+            markings.drawRect(CONFIG.TEACHER.SPAWN_X + 40, y, 5, 20);
         }
         markings.endFill();
 

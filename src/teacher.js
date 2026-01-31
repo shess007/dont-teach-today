@@ -1,5 +1,24 @@
 // RECESS REVENGE - Teacher (Player 1)
 
+// Spritesheet data
+let TEACHER_SPRITESHEET = null;
+let TEACHER_SPRITESHEET_LOADED = false;
+
+/**
+ * Preload teacher spritesheet assets
+ */
+async function preloadTeacherAssets() {
+    try {
+        // Load spritesheet JSON and texture
+        TEACHER_SPRITESHEET = await PIXI.Assets.load('assets/models/teacher-spritesheet.json');
+        TEACHER_SPRITESHEET_LOADED = true;
+        Utils.log('Teacher spritesheet loaded successfully');
+    } catch (error) {
+        console.warn('Failed to load teacher spritesheet, using fallback graphics:', error);
+        TEACHER_SPRITESHEET_LOADED = false;
+    }
+}
+
 class Teacher {
     constructor(container, audio = null) {
         this.container = container;
@@ -22,15 +41,47 @@ class Teacher {
         this.sprintTimer = 0;
         this.sprintCooldownTimer = 0;
 
+        // Animation state
+        this.currentAnimation = 'idle';
+        this.facingRight = true; // Track direction for sprite flipping
+
         // Visual
         this.sprite = null;
         this.createSprite();
     }
 
     /**
-     * Create pixel art teacher sprite
+     * Create animated teacher sprite
      */
     createSprite() {
+        if (TEACHER_SPRITESHEET_LOADED && TEACHER_SPRITESHEET) {
+            try {
+                // Create AnimatedSprite from the spritesheet
+                const textures = TEACHER_SPRITESHEET.animations.idle;
+                this.sprite = new PIXI.AnimatedSprite(textures);
+
+                // Set animation properties
+                this.sprite.anchor.set(0.5, 0.5);
+                this.sprite.animationSpeed = 0.1; // Idle speed
+                this.sprite.loop = true;
+                this.sprite.play();
+
+                // Scale from 64x64 to display size (2x CONFIG.TEACHER.SIZE for visibility)
+                const scale = (CONFIG.TEACHER.SIZE * 2) / 64;
+                this.sprite.scale.set(scale, scale);
+
+                this.sprite.x = this.x;
+                this.sprite.y = this.y;
+
+                this.container.addChild(this.sprite);
+                Utils.log('Created animated teacher sprite');
+                return;
+            } catch (error) {
+                console.warn('Failed to create animated sprite, using fallback:', error);
+            }
+        }
+
+        // Fallback to Graphics if spritesheet didn't load
         const graphics = new PIXI.Graphics();
 
         // Simple pixel art person shape
@@ -72,6 +123,7 @@ class Teacher {
         this.sprite.y = this.y;
 
         this.container.addChild(this.sprite);
+        Utils.log('Created fallback teacher graphics');
     }
 
     /**
@@ -152,10 +204,64 @@ class Teacher {
         this.sprite.x = this.x;
         this.sprite.y = this.y;
 
-        // Rotate sprite slightly based on movement direction (visual feedback)
+        // Update animation and direction
+        this.updateAnimation(direction);
+
+        // Update sprite flipping based on horizontal movement
+        if (direction.x > 0) {
+            this.facingRight = true;
+        } else if (direction.x < 0) {
+            this.facingRight = false;
+        }
+
+        // Apply horizontal flip (only for AnimatedSprite, not Graphics fallback)
+        if (this.sprite.textures) {
+            const baseScale = (CONFIG.TEACHER.SIZE * 2) / 64;
+            const scaleMultiplier = this.isSprinting ? 1.15 : 1.0;
+            const scaleX = this.facingRight ? baseScale * scaleMultiplier : -baseScale * scaleMultiplier;
+            this.sprite.scale.set(scaleX, baseScale * scaleMultiplier);
+        } else {
+            // Fallback Graphics rotation (old behavior)
+            if (direction.x !== 0 || direction.y !== 0) {
+                const angle = Math.atan2(direction.y, direction.x);
+                this.sprite.rotation = angle;
+            }
+        }
+    }
+
+    /**
+     * Update animation based on movement state
+     */
+    updateAnimation(direction) {
+        // Only update if using AnimatedSprite
+        if (!this.sprite.textures || !TEACHER_SPRITESHEET_LOADED) {
+            return;
+        }
+
+        let targetAnim = 'idle';
+        let animSpeed = 0.1;
+
+        // Determine animation based on movement
         if (direction.x !== 0 || direction.y !== 0) {
-            const angle = Math.atan2(direction.y, direction.x);
-            this.sprite.rotation = angle;
+            if (this.isSprinting) {
+                targetAnim = 'sprint';
+                animSpeed = 0.2;
+            } else {
+                targetAnim = 'walk';
+                animSpeed = 0.15;
+            }
+        } else {
+            targetAnim = 'idle';
+            animSpeed = 0.1;
+        }
+
+        // Switch animation if changed
+        if (this.currentAnimation !== targetAnim) {
+            this.currentAnimation = targetAnim;
+            const newTextures = TEACHER_SPRITESHEET.animations[targetAnim];
+            this.sprite.textures = newTextures;
+            this.sprite.animationSpeed = animSpeed;
+            this.sprite.play();
         }
     }
 
@@ -165,14 +271,15 @@ class Teacher {
     updateHidingState(obstacles) {
         let inBush = false;
 
-        // Check if teacher's position overlaps with any bush
+        // Check if teacher is almost fully inside a bush
+        const hideMargin = CONFIG.TEACHER.HITBOX_RADIUS * 0.7;
         for (const obstacle of obstacles) {
             if (obstacle.type === 'BUSH' && obstacle.canHide) {
-                // Check if teacher's center is inside the bush
-                if (Utils.circleRectCollision(
-                    this.x, this.y, CONFIG.TEACHER.HITBOX_RADIUS * 0.5, // Smaller radius for hiding check
-                    obstacle.x, obstacle.y, obstacle.width, obstacle.height
-                )) {
+                // Teacher's bounding circle must be contained within the bush
+                if (this.x - hideMargin >= obstacle.x &&
+                    this.x + hideMargin <= obstacle.x + obstacle.width &&
+                    this.y - hideMargin >= obstacle.y &&
+                    this.y + hideMargin <= obstacle.y + obstacle.height) {
                     inBush = true;
                     break;
                 }
@@ -215,11 +322,8 @@ class Teacher {
         }
 
         // Visual feedback: scale sprite slightly when sprinting
-        if (this.isSprinting) {
-            this.sprite.scale.set(1.15);
-        } else {
-            this.sprite.scale.set(1.0);
-        }
+        // (This is now handled in the update method's flip logic to preserve direction)
+        // The scale is applied when setting the horizontal flip
     }
 
     /**
