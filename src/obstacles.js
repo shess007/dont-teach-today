@@ -3,6 +3,8 @@
 // Textures loaded via preloadObstacleAssets()
 const TREE_TEXTURES = [];
 let BUSH_TEXTURE = null;
+let BENCH_TEXTURE = null;
+let COOP_TEXTURE = null;
 
 async function preloadObstacleAssets() {
     const treePaths = ['assets/models/tree1.png', 'assets/models/tree2.png'];
@@ -11,7 +13,10 @@ async function preloadObstacleAssets() {
         TREE_TEXTURES.push(texture);
     }
     BUSH_TEXTURE = await PIXI.Assets.load('assets/models/bush1.png');
-    Utils.log(`Loaded ${TREE_TEXTURES.length} tree textures and bush texture`);
+    BENCH_TEXTURE = await PIXI.Assets.load('assets/models/bench1.png');
+    COOP_TEXTURE = await PIXI.Assets.load('assets/models/chicken-coop.png');
+    await PIXI.Assets.load('assets/models/schoolyard-tile.png');
+    Utils.log(`Loaded obstacle textures`);
 }
 
 class Obstacle {
@@ -42,6 +47,22 @@ class Obstacle {
             const sprite = new PIXI.Sprite(BUSH_TEXTURE);
             const scale = this.height / BUSH_TEXTURE.height;
             sprite.width = BUSH_TEXTURE.width * scale;
+            sprite.height = this.height;
+            this.width = sprite.width;
+            this.sprite = sprite;
+        } else if (this.type === 'BENCH' && BENCH_TEXTURE) {
+            // Use bench PNG texture, scaled proportionally to fit height
+            const sprite = new PIXI.Sprite(BENCH_TEXTURE);
+            const scale = this.height / BENCH_TEXTURE.height;
+            sprite.width = BENCH_TEXTURE.width * scale;
+            sprite.height = this.height;
+            this.width = sprite.width;
+            this.sprite = sprite;
+        } else if (this.type === 'CHICKEN_COOP' && COOP_TEXTURE) {
+            // Use chicken coop PNG texture, scaled proportionally to fit height
+            const sprite = new PIXI.Sprite(COOP_TEXTURE);
+            const scale = this.height / COOP_TEXTURE.height;
+            sprite.width = COOP_TEXTURE.width * scale;
             sprite.height = this.height;
             this.width = sprite.width;
             this.sprite = sprite;

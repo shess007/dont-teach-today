@@ -107,86 +107,48 @@ class Game {
     }
 
     /**
-     * Draw pixel art asphalt background
+     * Draw tiled schoolyard background
      */
     drawBackground() {
-        const bg = new PIXI.Graphics();
+        // Tile the schoolyard texture across the entire background
+        const texture = PIXI.Assets.get('assets/models/schoolyard-tile.png');
+        if (texture) {
+            const tilingSprite = new PIXI.TilingSprite(texture, CONFIG.SCREEN.WIDTH, CONFIG.SCREEN.HEIGHT);
+            this.backgroundLayer.addChild(tilingSprite);
+        } else {
+            // Fallback solid color
+            const fallback = new PIXI.Graphics();
+            fallback.beginFill(CONFIG.COLORS.ASPHALT);
+            fallback.drawRect(0, 0, CONFIG.SCREEN.WIDTH, CONFIG.SCREEN.HEIGHT);
+            fallback.endFill();
+            this.backgroundLayer.addChild(fallback);
+        }
 
-        // Base asphalt surface
-        bg.beginFill(CONFIG.COLORS.ASPHALT);
-        bg.drawRect(0, 0, CONFIG.SCREEN.WIDTH, CONFIG.SCREEN.HEIGHT);
-        bg.endFill();
+        // Overlay markings on top of the tiled background
+        const markings = new PIXI.Graphics();
 
-        // Asphalt texture (lighter patches and variations)
-        bg.beginFill(0x454545, 0.3);
+        // Goal line (yellow dashed line on left)
+        markings.beginFill(0xffff00, 0.9);
         for (let y = 0; y < CONFIG.SCREEN.HEIGHT; y += 40) {
-            for (let x = 0; x < CONFIG.SCREEN.WIDTH; x += 60) {
-                const offsetX = (y % 80 === 0) ? 30 : 0;
-                bg.drawRect(x + offsetX + Math.random() * 15, y + Math.random() * 15, 25, 25);
-            }
+            markings.drawRect(CONFIG.TEACHER.SPAWN_X - 30, y, 5, 20);
         }
-        bg.endFill();
-
-        // Darker asphalt patches
-        bg.beginFill(0x2a2a2a, 0.4);
-        for (let y = 0; y < CONFIG.SCREEN.HEIGHT; y += 50) {
-            for (let x = 0; x < CONFIG.SCREEN.WIDTH; x += 70) {
-                const offsetX = (y % 100 === 0) ? 35 : 0;
-                bg.drawRect(x + offsetX + Math.random() * 10, y + Math.random() * 10, 30, 30);
-            }
-        }
-        bg.endFill();
-
-        // Asphalt cracks (thin dark lines)
-        bg.lineStyle(2, 0x1a1a1a, 0.5);
-        for (let i = 0; i < 15; i++) {
-            const startX = Math.random() * CONFIG.SCREEN.WIDTH;
-            const startY = Math.random() * CONFIG.SCREEN.HEIGHT;
-            const length = 40 + Math.random() * 60;
-            const angle = Math.random() * Math.PI * 2;
-            const endX = startX + Math.cos(angle) * length;
-            const endY = startY + Math.sin(angle) * length;
-            bg.moveTo(startX, startY);
-            bg.lineTo(endX, endY);
-        }
-
-        // Horizontal path marking (lighter gray)
-        bg.beginFill(CONFIG.COLORS.PATH);
-        bg.drawRect(0, CONFIG.SCREEN.HEIGHT / 2 - 50, CONFIG.SCREEN.WIDTH, 100);
-        bg.endFill();
-
-        // Path texture (small stones/aggregate)
-        bg.beginFill(0x5a5a5a, 0.4);
-        for (let x = 0; x < CONFIG.SCREEN.WIDTH; x += 25) {
-            const y = CONFIG.SCREEN.HEIGHT / 2 - 40 + Math.random() * 80;
-            bg.drawRect(x + Math.random() * 15, y, 6, 6);
-        }
-        bg.endFill();
-
-        // Goal line (yellow dashed line on left - like playground markings)
-        bg.beginFill(0xffff00, 0.9);
-        for (let y = 0; y < CONFIG.SCREEN.HEIGHT; y += 40) {
-            bg.drawRect(CONFIG.TEACHER.SPAWN_X - 30, y, 5, 20);
-        }
-        bg.endFill();
+        markings.endFill();
 
         // Finish line (yellow dashed line near school)
-        bg.beginFill(0xffff00, 0.9);
+        markings.beginFill(0xffff00, 0.9);
         for (let y = 0; y < CONFIG.SCREEN.HEIGHT; y += 40) {
-            bg.drawRect(CONFIG.TEACHER.GOAL_X, y, 5, 20);
+            markings.drawRect(CONFIG.TEACHER.GOAL_X, y, 5, 20);
         }
-        bg.endFill();
+        markings.endFill();
 
-        // Add some white painted lines (like sports court markings)
-        bg.lineStyle(3, 0xffffff, 0.6);
-        // Horizontal center line
-        bg.moveTo(0, CONFIG.SCREEN.HEIGHT / 2);
-        bg.lineTo(CONFIG.SCREEN.WIDTH, CONFIG.SCREEN.HEIGHT / 2);
-        // Vertical center line
-        bg.moveTo(CONFIG.SCREEN.WIDTH / 2, 0);
-        bg.lineTo(CONFIG.SCREEN.WIDTH / 2, CONFIG.SCREEN.HEIGHT);
+        // White painted lines (sports court markings)
+        markings.lineStyle(3, 0xffffff, 0.6);
+        markings.moveTo(0, CONFIG.SCREEN.HEIGHT / 2);
+        markings.lineTo(CONFIG.SCREEN.WIDTH, CONFIG.SCREEN.HEIGHT / 2);
+        markings.moveTo(CONFIG.SCREEN.WIDTH / 2, 0);
+        markings.lineTo(CONFIG.SCREEN.WIDTH / 2, CONFIG.SCREEN.HEIGHT);
 
-        this.backgroundLayer.addChild(bg);
+        this.backgroundLayer.addChild(markings);
     }
 
     /**
@@ -475,8 +437,8 @@ class Game {
             'Player 1 (Teacher): WASD/Arrows + SHIFT to sprint\n' +
             'Player 2 (Pupil): Mouse to aim, Click to throw eggs\n' +
             'Click the red chicken coop to refill eggs!\n\n' +
-            'Teacher: Reach the school building!\n' +
-            'Pupil: Stop the teacher before time runs out!\n\n' +
+            'Teacher: Reach the school building before time runs out!\n' +
+            'Pupil: Stop the teacher from reaching the school building!\n\n' +
             'Press SPACE to start',
             {
                 fontFamily: CONFIG.UI.FONT_FAMILY,
