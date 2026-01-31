@@ -94,9 +94,10 @@ class Pupil {
         // Find chicken coop in obstacles (do this once per update)
         this.chickenCoop = obstacles.find(obs => obs.type === 'CHICKEN_COOP');
 
-        // Update crosshair position from mouse
+        // Update crosshair position from mouse (restricted to danger zone)
         const mousePos = this.input.getMousePosition();
-        this.crosshairX = mousePos.x;
+        const safeZoneX = CONFIG.TEACHER.SPAWN_X + 40;
+        this.crosshairX = Math.max(mousePos.x, safeZoneX);
         this.crosshairY = mousePos.y;
 
         // Update crosshair sprite position and color
