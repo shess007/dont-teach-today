@@ -410,6 +410,9 @@ class Game {
      * Show start screen
      */
     showStartScreen() {
+        // Stop background music when returning to menu
+        this.audio.stopMusic();
+
         // Clear UI layer
         this.uiLayer.removeChildren();
 
@@ -468,6 +471,9 @@ class Game {
 
         // Initialize audio (requires user interaction)
         this.audio.init();
+
+        // Start background music
+        this.audio.startMusic();
 
         this.state = GAME_STATE.PLAYING;
         this.winner = WINNER.NONE;
@@ -733,6 +739,9 @@ class Game {
     pauseGame() {
         this.state = GAME_STATE.PAUSED;
 
+        // Pause background music
+        this.audio.pauseMusic();
+
         const pauseText = new PIXI.Text('PAUSED\nPress ESC to resume', {
             fontFamily: CONFIG.UI.FONT_FAMILY,
             fontSize: CONFIG.UI.FONT_SIZE_LARGE,
@@ -759,6 +768,9 @@ class Game {
     resumeGame() {
         this.state = GAME_STATE.PLAYING;
 
+        // Resume background music
+        this.audio.resumeMusic();
+
         // Remove pause text
         const pauseText = this.uiLayer.getChildByName('pauseText');
         if (pauseText) {
@@ -772,6 +784,9 @@ class Game {
     endGame(winner) {
         this.state = GAME_STATE.GAME_OVER;
         this.winner = winner;
+
+        // Stop background music
+        this.audio.stopMusic();
 
         // Play win sound
         if (winner === WINNER.TEACHER) {

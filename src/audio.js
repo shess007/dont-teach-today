@@ -10,6 +10,10 @@ class AudioManager {
 
         // Initialize on user interaction (required by browsers)
         this.initialized = false;
+
+        // Music system (MP3 playback)
+        this.musicElement = null;
+        this.musicVolume = 0.3;
     }
 
     /**
@@ -272,5 +276,46 @@ class AudioManager {
      */
     setVolume(volume) {
         this.masterVolume = Math.max(0, Math.min(1, volume));
+    }
+
+    /**
+     * Start the background music loop
+     */
+    startMusic() {
+        if (!this.enabled) return;
+
+        if (!this.musicElement) {
+            this.musicElement = new Audio('assets/music/background-music1.mp3');
+            this.musicElement.loop = true;
+            this.musicElement.volume = this.musicVolume * this.masterVolume;
+        }
+
+        this.musicElement.currentTime = 0;
+        this.musicElement.play().catch(e => console.warn('Music playback failed:', e));
+    }
+
+    /**
+     * Stop the background music
+     */
+    stopMusic() {
+        if (!this.musicElement) return;
+        this.musicElement.pause();
+        this.musicElement.currentTime = 0;
+    }
+
+    /**
+     * Pause the background music
+     */
+    pauseMusic() {
+        if (!this.musicElement) return;
+        this.musicElement.pause();
+    }
+
+    /**
+     * Resume the background music
+     */
+    resumeMusic() {
+        if (!this.musicElement) return;
+        this.musicElement.play().catch(e => console.warn('Music resume failed:', e));
     }
 }
