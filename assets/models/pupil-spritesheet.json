@@ -1,0 +1,102 @@
+{
+  "frames": {
+    "pupil-idle-0": {
+      "frame": { "x": 0, "y": 0, "w": 64, "h": 64 },
+      "sourceSize": { "w": 64, "h": 64 },
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }
+    },
+    "pupil-idle-1": {
+      "frame": { "x": 64, "y": 0, "w": 64, "h": 64 },
+      "sourceSize": { "w": 64, "h": 64 },
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }
+    },
+    "pupil-idle-2": {
+      "frame": { "x": 128, "y": 0, "w": 64, "h": 64 },
+      "sourceSize": { "w": 64, "h": 64 },
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }
+    },
+    "pupil-idle-3": {
+      "frame": { "x": 192, "y": 0, "w": 64, "h": 64 },
+      "sourceSize": { "w": 64, "h": 64 },
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }
+    },
+    "pupil-throw-0": {
+      "frame": { "x": 0, "y": 64, "w": 64, "h": 64 },
+      "sourceSize": { "w": 64, "h": 64 },
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }
+    },
+    "pupil-throw-1": {
+      "frame": { "x": 64, "y": 64, "w": 64, "h": 64 },
+      "sourceSize": { "w": 64, "h": 64 },
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }
+    },
+    "pupil-throw-2": {
+      "frame": { "x": 128, "y": 64, "w": 64, "h": 64 },
+      "sourceSize": { "w": 64, "h": 64 },
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }
+    },
+    "pupil-throw-3": {
+      "frame": { "x": 192, "y": 64, "w": 64, "h": 64 },
+      "sourceSize": { "w": 64, "h": 64 },
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }
+    },
+    "pupil-throw-4": {
+      "frame": { "x": 256, "y": 64, "w": 64, "h": 64 },
+      "sourceSize": { "w": 64, "h": 64 },
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }
+    },
+    "pupil-throw-5": {
+      "frame": { "x": 320, "y": 64, "w": 64, "h": 64 },
+      "sourceSize": { "w": 64, "h": 64 },
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }
+    },
+    "pupil-celebrate-0": {
+      "frame": { "x": 0, "y": 128, "w": 64, "h": 64 },
+      "sourceSize": { "w": 64, "h": 64 },
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }
+    },
+    "pupil-celebrate-1": {
+      "frame": { "x": 64, "y": 128, "w": 64, "h": 64 },
+      "sourceSize": { "w": 64, "h": 64 },
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }
+    },
+    "pupil-celebrate-2": {
+      "frame": { "x": 128, "y": 128, "w": 64, "h": 64 },
+      "sourceSize": { "w": 64, "h": 64 },
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }
+    },
+    "pupil-celebrate-3": {
+      "frame": { "x": 192, "y": 128, "w": 64, "h": 64 },
+      "sourceSize": { "w": 64, "h": 64 },
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 64, "h": 64 }
+    }
+  },
+  "animations": {
+    "idle": [
+      "pupil-idle-0",
+      "pupil-idle-1",
+      "pupil-idle-2",
+      "pupil-idle-3"
+    ],
+    "throw": [
+      "pupil-throw-0",
+      "pupil-throw-1",
+      "pupil-throw-2",
+      "pupil-throw-3",
+      "pupil-throw-4",
+      "pupil-throw-5"
+    ],
+    "celebrate": [
+      "pupil-celebrate-0",
+      "pupil-celebrate-1",
+      "pupil-celebrate-2",
+      "pupil-celebrate-3"
+    ]
+  },
+  "meta": {
+    "image": "pupil-spritesheet.png",
+    "format": "RGBA8888",
+    "size": { "w": 384, "h": 192 },
+    "scale": 1
+  }
+}

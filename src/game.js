@@ -57,6 +57,7 @@ class Game {
         // Preload asset textures before creating game objects
         await preloadObstacleAssets();
         await preloadTeacherAssets();
+        await preloadPupilAssets();
 
         // Create placeholder graphics and UI
         this.createPlaceholderGraphics();

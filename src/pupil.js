@@ -1,5 +1,19 @@
 // RECESS REVENGE - Pupil (Player 2)
 
+let PUPIL_SPRITESHEET = null;
+let PUPIL_SPRITESHEET_LOADED = false;
+
+async function preloadPupilAssets() {
+    try {
+        PUPIL_SPRITESHEET = await PIXI.Assets.load('assets/models/pupil-spritesheet.json');
+        PUPIL_SPRITESHEET_LOADED = true;
+        Utils.log('Pupil spritesheet loaded successfully');
+    } catch (error) {
+        console.warn('Failed to load pupil spritesheet, using fallback graphics:', error);
+        PUPIL_SPRITESHEET_LOADED = false;
+    }
+}
+
 class Pupil {
     constructor(container, input, audio = null) {
         this.container = container;
@@ -27,8 +41,13 @@ class Pupil {
         this.crosshairSprite = null;
         this.trajectoryGraphics = null;
 
+        // Animation state
+        this.currentAnimation = 'idle';
+        this.pupilSprite = null; // The visible pupil character sprite in bottom-right
+
         this.createCrosshair();
         this.createTrajectoryPreview();
+        this.createPupilSprite();
     }
 
     /**
@@ -68,6 +87,65 @@ class Pupil {
     createTrajectoryPreview() {
         this.trajectoryGraphics = new PIXI.Graphics();
         this.container.addChild(this.trajectoryGraphics);
+    }
+
+    /**
+     * Create pupil character sprite in bottom-right corner
+     */
+    createPupilSprite() {
+        if (PUPIL_SPRITESHEET_LOADED && PUPIL_SPRITESHEET) {
+            try {
+                const textures = PUPIL_SPRITESHEET.animations.idle;
+                this.pupilSprite = new PIXI.AnimatedSprite(textures);
+                this.pupilSprite.anchor.set(0.5, 0.5);
+                this.pupilSprite.animationSpeed = 0.1;
+                this.pupilSprite.loop = true;
+                this.pupilSprite.play();
+
+                // Position in bottom-right corner
+                this.pupilSprite.x = CONFIG.SCREEN.WIDTH - 60;
+                this.pupilSprite.y = CONFIG.SCREEN.HEIGHT - 60;
+
+                this.container.addChild(this.pupilSprite);
+                Utils.log('Created animated pupil sprite');
+                return;
+            } catch (error) {
+                console.warn('Failed to create animated pupil sprite:', error);
+            }
+        }
+        // No fallback needed - pupil was previously invisible
+    }
+
+    /**
+     * Set pupil animation
+     */
+    setPupilAnimation(animName) {
+        if (!this.pupilSprite || !this.pupilSprite.textures || !PUPIL_SPRITESHEET_LOADED) return;
+        if (this.currentAnimation === animName) return;
+
+        this.currentAnimation = animName;
+        const newTextures = PUPIL_SPRITESHEET.animations[animName];
+        if (newTextures) {
+            this.pupilSprite.textures = newTextures;
+            this.pupilSprite.animationSpeed = animName === 'throw' ? 0.2 : 0.1;
+            this.pupilSprite.loop = animName !== 'throw';
+            this.pupilSprite.play();
+
+            if (animName === 'throw') {
+                this.pupilSprite.onComplete = () => {
+                    this.setPupilAnimation('idle');
+                };
+            }
+        }
+    }
+
+    /**
+     * Celebrate animation (public method)
+     */
+    celebrate() {
+        this.setPupilAnimation('celebrate');
+        // Return to idle after 2 seconds
+        setTimeout(() => this.setPupilAnimation('idle'), 2000);
     }
 
     /**
@@ -153,8 +231,8 @@ class Pupil {
         if (this.eggCount <= 0 || !this.canThrow) return;
 
         // Calculate trajectory points
-        const startX = CONFIG.SCREEN.WIDTH / 2; // Eggs come from center/top
-        const startY = 0;
+        const startX = CONFIG.SCREEN.WIDTH - 40; // Eggs come from bottom-right
+        const startY = CONFIG.SCREEN.HEIGHT - 40;
         const targetX = this.crosshairX;
         const targetY = this.crosshairY;
 
@@ -203,9 +281,9 @@ class Pupil {
             return null;
         }
 
-        // Create projectile
-        const startX = CONFIG.SCREEN.WIDTH / 2;
-        const startY = 0;
+        // Create projectile from bottom-right corner
+        const startX = CONFIG.SCREEN.WIDTH - 40;
+        const startY = CONFIG.SCREEN.HEIGHT - 40;
         const targetX = this.crosshairX;
         const targetY = this.crosshairY;
 
@@ -215,6 +293,9 @@ class Pupil {
         this.eggCount--;
         this.canThrow = false;
         this.throwCooldown = CONFIG.PUPIL.EGG_COOLDOWN;
+
+        // Play throw animation
+        this.setPupilAnimation('throw');
 
         // Play throw sound
         if (this.audio) {
@@ -324,6 +405,10 @@ class Pupil {
         if (this.trajectoryGraphics) {
             this.container.removeChild(this.trajectoryGraphics);
             this.trajectoryGraphics.destroy();
+        }
+        if (this.pupilSprite) {
+            this.container.removeChild(this.pupilSprite);
+            this.pupilSprite.destroy();
         }
     }
 }
