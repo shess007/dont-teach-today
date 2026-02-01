@@ -20,6 +20,7 @@ class GameClient {
         this.inputSendInterval = 1000 / 60; // Send inputs at 60Hz
         this.lastState = null;
         this.lobbyState = null;
+        this.prevMusicToggle = false;
     }
 
     async init() {
@@ -73,6 +74,13 @@ class GameClient {
             this.sendInputs();
             this.lastInputSendTime = now;
         }
+
+        // Handle music toggle (M key, edge-detected)
+        const musicKeyDown = this.input.isKeyDown('MUSIC_TOGGLE');
+        if (musicKeyDown && !this.prevMusicToggle) {
+            this.renderer.audio.toggleMusic();
+        }
+        this.prevMusicToggle = musicKeyDown;
 
         // Handle restart — go back to lobby
         if (this.gameState === GAME_STATE.GAME_OVER && this.input.isRestartPressed()) {

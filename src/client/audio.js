@@ -8,6 +8,7 @@ export class AudioManager {
         this.initialized = false;
         this.musicElement = null;
         this.musicVolume = 0.3;
+        this.musicMuted = false;
     }
 
     init() {
@@ -135,7 +136,7 @@ export class AudioManager {
         if (!this.musicElement) {
             this.musicElement = new Audio('assets/music/background-music1.mp3');
             this.musicElement.loop = true;
-            this.musicElement.volume = this.musicVolume * this.masterVolume;
+            this.musicElement.volume = this.musicMuted ? 0 : this.musicVolume * this.masterVolume;
         }
         this.musicElement.currentTime = 0;
         this.musicElement.play().catch(() => {});
@@ -153,5 +154,13 @@ export class AudioManager {
 
     resumeMusic() {
         if (this.musicElement) this.musicElement.play().catch(() => {});
+    }
+
+    toggleMusic() {
+        this.musicMuted = !this.musicMuted;
+        if (this.musicElement) {
+            this.musicElement.volume = this.musicMuted ? 0 : this.musicVolume * this.masterVolume;
+        }
+        return this.musicMuted;
     }
 }

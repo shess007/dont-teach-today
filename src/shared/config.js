@@ -75,7 +75,8 @@ export const CONFIG = {
         RIGHT: ['d', 'D', 'ArrowRight'],
         SPRINT: ['Shift'],
         PAUSE: ['Escape'],
-        RESTART: [' ', 'Enter']
+        RESTART: [' ', 'Enter'],
+        MUSIC_TOGGLE: ['m', 'M']
     }
 };
 
