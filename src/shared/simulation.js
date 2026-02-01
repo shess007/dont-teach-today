@@ -34,10 +34,10 @@ function createObstacleLayout() {
         canHide: false
     });
 
-    // Bushes
+    // Bushes (garden clusters and hiding spots along paths)
     const bushPositions = [
-        { x: 350, y: 200 }, { x: 600, y: 400 }, { x: 450, y: 550 },
-        { x: 800, y: 150 }, { x: 700, y: 500 }
+        { x: 450, y: 300 }, { x: 620, y: 200 }, { x: 700, y: 530 },
+        { x: 380, y: 520 }, { x: 900, y: 220 }
     ];
     for (const pos of bushPositions) {
         if (isValidPosition(pos.x, pos.y, CONFIG.OBSTACLES.BUSH.WIDTH, CONFIG.OBSTACLES.BUSH.HEIGHT)) {
@@ -50,9 +50,9 @@ function createObstacleLayout() {
         }
     }
 
-    // Benches
+    // Benches (seating areas along paths)
     const benchPositions = [
-        { x: 400, y: 350 }, { x: 650, y: 250 }, { x: 500, y: 150 }
+        { x: 330, y: 200 }, { x: 600, y: 460 }, { x: 880, y: 400 }
     ];
     for (const pos of benchPositions) {
         if (isValidPosition(pos.x, pos.y, CONFIG.OBSTACLES.BENCH.WIDTH, CONFIG.OBSTACLES.BENCH.HEIGHT)) {
@@ -65,9 +65,10 @@ function createObstacleLayout() {
         }
     }
 
-    // Trees
+    // Trees (perimeter avenue trees + center chokepoint)
     const treePositions = [
-        { x: 300, y: 450 }, { x: 850, y: 350 }, { x: 550, y: 80 }
+        { x: 270, y: 60 }, { x: 550, y: 55 }, { x: 950, y: 60 },
+        { x: 270, y: 640 }, { x: 780, y: 350 }
     ];
     for (const pos of treePositions) {
         if (isValidPosition(pos.x, pos.y, CONFIG.OBSTACLES.TREE.WIDTH, CONFIG.OBSTACLES.TREE.HEIGHT)) {
@@ -80,10 +81,10 @@ function createObstacleLayout() {
         }
     }
 
-    // Swing set
-    if (isValidPosition(750, 500, CONFIG.OBSTACLES.SWING_SET.WIDTH, CONFIG.OBSTACLES.SWING_SET.HEIGHT)) {
+    // Swing set (playground area, bottom-center-right)
+    if (isValidPosition(730, 580, CONFIG.OBSTACLES.SWING_SET.WIDTH, CONFIG.OBSTACLES.SWING_SET.HEIGHT)) {
         obstacles.push({
-            type: 'SWING_SET', x: 750, y: 500,
+            type: 'SWING_SET', x: 730, y: 580,
             width: CONFIG.OBSTACLES.SWING_SET.WIDTH,
             height: CONFIG.OBSTACLES.SWING_SET.HEIGHT,
             canHide: false

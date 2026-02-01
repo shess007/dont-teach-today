@@ -11,7 +11,7 @@ const CONFIG = {
 
     // Game timing
     GAME: {
-        MATCH_DURATION: 90, // seconds (reduced for more intense matches)
+        MATCH_DURATION: 180, // seconds (reduced for more intense matches)
         FPS: 60,
         RESPAWN_INVULNERABILITY: 1.5, // seconds (increased recovery time)
         DEBUG_MODE: false // Set to true to enable debug console logs
@@ -32,8 +32,8 @@ const CONFIG = {
 
     // Pupil (Player 2) settings
     PUPIL: {
-        STARTING_EGGS: 5, // increased for more coverage
-        MAX_EGGS: 5, // increased to match
+        STARTING_EGGS: 4, // increased for more coverage
+        MAX_EGGS: 4, // increased to match
         EGG_COOLDOWN: 0.8, // seconds between throws (faster shooting)
         REFILL_DELAY: 0.75, // seconds at chicken coop
         REFILL_AMOUNT: 2 // refill 2 eggs at a time (makes coop more valuable)

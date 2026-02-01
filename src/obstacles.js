@@ -295,13 +295,13 @@ function createObstacles(container) {
     const coopX = width / 2 - 40;
     obstacles.push(new Obstacle('CHICKEN_COOP', coopX, coopY, container));
 
-    // Add bushes (can hide in these)
+    // Add bushes (garden clusters and hiding spots along paths)
     const bushPositions = [
-        { x: 350, y: 200 },
-        { x: 600, y: 400 },
-        { x: 450, y: 550 },
-        { x: 800, y: 150 },
-        { x: 700, y: 500 }
+        { x: 450, y: 300 },
+        { x: 620, y: 200 },
+        { x: 700, y: 530 },
+        { x: 380, y: 520 },
+        { x: 900, y: 220 }
     ];
 
     for (const pos of bushPositions) {
@@ -310,11 +310,11 @@ function createObstacles(container) {
         }
     }
 
-    // Add benches
+    // Add benches (seating areas along paths)
     const benchPositions = [
-        { x: 400, y: 350 },
-        { x: 650, y: 250 },
-        { x: 500, y: 150 }
+        { x: 330, y: 200 },
+        { x: 600, y: 460 },
+        { x: 880, y: 400 }
     ];
 
     for (const pos of benchPositions) {
@@ -323,11 +323,13 @@ function createObstacles(container) {
         }
     }
 
-    // Add trees
+    // Add trees (perimeter avenue trees + center chokepoint)
     const treePositions = [
-        { x: 300, y: 450 },
-        { x: 850, y: 350 },
-        { x: 550, y: 80 }
+        { x: 270, y: 60 },
+        { x: 550, y: 55 },
+        { x: 950, y: 60 },
+        { x: 270, y: 640 },
+        { x: 780, y: 350 }
     ];
 
     for (const pos of treePositions) {
@@ -336,9 +338,9 @@ function createObstacles(container) {
         }
     }
 
-    // Add swing set
-    if (isValidPosition(750, 500, 100, 120)) {
-        obstacles.push(new Obstacle('SWING_SET', 750, 500, container));
+    // Add swing set (playground area, bottom-center-right)
+    if (isValidPosition(730, 580, 100, 120)) {
+        obstacles.push(new Obstacle('SWING_SET', 730, 580, container));
     }
 
     Utils.log(`Created ${obstacles.length} obstacles`);
