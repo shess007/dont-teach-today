@@ -1,0 +1,19 @@
+{
+  "name": "recess-revenge",
+  "version": "1.0.0",
+  "description": "RECESS REVENGE - Asymmetric Multiplayer Browser Game",
+  "type": "module",
+  "scripts": {
+    "dev": "node build.js && partykit dev",
+    "build": "node build.js && partykit build",
+    "deploy": "node build.js && partykit deploy",
+    "build:client": "node build.js"
+  },
+  "dependencies": {
+    "partysocket": "^1.0.2"
+  },
+  "devDependencies": {
+    "partykit": "^0.0.111",
+    "esbuild": "^0.24.0"
+  }
+}

@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(find:*)",
-      "Bash(sips:*)"
+      "Bash(sips:*)",
+      "WebFetch(domain:docs.partykit.io)",
+      "Bash(node build.js:*)"
     ]
   }
 }

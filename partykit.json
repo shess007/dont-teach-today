@@ -1,0 +1,9 @@
+{
+  "name": "recess-revenge",
+  "main": "src/server/index.ts",
+  "compatibilityDate": "2024-09-01",
+  "port": 1999,
+  "serve": {
+    "path": "public"
+  }
+}
