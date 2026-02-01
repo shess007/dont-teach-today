@@ -746,7 +746,7 @@ export class GameRenderer {
             this.uiLayer.addChild(startBtn);
         } else {
             const waitText = new PIXI.Text('Waiting for both players to pick a role...', {
-                fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 22, fill: 0x888888,
+                fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 22, fill: 0xcccccc,
                 stroke: 0x000000, strokeThickness: 2
             });
             waitText.anchor.set(0.5);
@@ -758,7 +758,7 @@ export class GameRenderer {
         const urlParams = new URLSearchParams(window.location.search);
         const roomId = urlParams.get('room') || 'default';
         const roomText = new PIXI.Text(`Room: ${roomId}  |  Share this URL to invite a friend!`, {
-            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 18, fill: 0x888888,
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 18, fill: 0xcccccc,
             stroke: 0x000000, strokeThickness: 2
         });
         roomText.anchor.set(0.5);
@@ -767,7 +767,7 @@ export class GameRenderer {
 
         // Player count
         const countText = new PIXI.Text(`Players in room: ${lobbyState.playerCount || 1}`, {
-            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 18, fill: 0x666666,
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 18, fill: 0xcccccc,
             stroke: 0x000000, strokeThickness: 2
         });
         countText.anchor.set(0.5);
