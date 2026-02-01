@@ -3,8 +3,8 @@
 
 export const CONFIG = {
     SCREEN: {
-        WIDTH: 1280,
-        HEIGHT: 720,
+        WIDTH: 1408,
+        HEIGHT: 792,
         BACKGROUND_COLOR: 0x3a3a3a
     },
     GAME: {
@@ -20,9 +20,9 @@ export const CONFIG = {
         SPRINT_COOLDOWN: 6.0,
         SIZE: 32,
         HITBOX_RADIUS: 16,
-        SPAWN_X: 100,
-        SPAWN_Y: 360,
-        GOAL_X: 1180
+        SPAWN_X: 110,
+        SPAWN_Y: 396,
+        GOAL_X: 1298
     },
     PUPIL: {
         STARTING_EGGS: 5,
@@ -47,7 +47,7 @@ export const CONFIG = {
         CHICKEN_COOP: { WIDTH: 120, HEIGHT: 115, COLOR: 0xDC143C }
     },
     SCHOOL: {
-        WIDTH: 150, HEIGHT: 300, X: 1150, Y: 210, COLOR: 0x8B0000
+        WIDTH: 150, HEIGHT: 300, X: 1265, Y: 246, COLOR: 0x8B0000
     },
     COLORS: {
         TEACHER: 0x3498db,
