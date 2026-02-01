@@ -129,6 +129,7 @@ class GameClient {
                 break;
             case 'gameover':
                 this.gameState = GAME_STATE.GAME_OVER;
+                this.renderer.app.canvas.style.cursor = '';
                 if (event.winner === WINNER.TEACHER) {
                     this.renderer.audio.playSound('teacherWin');
                 } else {
@@ -166,6 +167,10 @@ class GameClient {
         this.renderer.audio.init();
         this.renderer.audio.startMusic();
         this.renderer.setupGame();
+        // Hide cursor for pupil (crosshair replaces it)
+        if (this.role === 'pupil') {
+            this.renderer.app.canvas.style.cursor = 'none';
+        }
     }
 
     onState(state) {
@@ -175,6 +180,7 @@ class GameClient {
         // Check if game over via state
         if (state.gameState === GAME_STATE.GAME_OVER && this.gameState !== GAME_STATE.GAME_OVER) {
             this.gameState = GAME_STATE.GAME_OVER;
+            this.renderer.app.canvas.style.cursor = '';
             this.renderer.audio.stopMusic();
             if (state.winner === WINNER.TEACHER) {
                 this.renderer.audio.playSound('teacherWin');
@@ -187,6 +193,7 @@ class GameClient {
 
     onDisconnected(data) {
         this.gameState = GAME_STATE.LOBBY;
+        this.renderer.app.canvas.style.cursor = '';
         this.renderer.audio.stopMusic();
         this.renderer.cleanupGame();
         this.renderer.showDisconnected(data.message);
