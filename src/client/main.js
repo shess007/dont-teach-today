@@ -13,11 +13,13 @@ class GameClient {
         this.input = null;
         this.interpolator = new StateInterpolator();
 
+        this.playerId = null;
         this.role = null;
         this.gameState = GAME_STATE.LOBBY;
         this.lastInputSendTime = 0;
         this.inputSendInterval = 1000 / 60; // Send inputs at 60Hz
         this.lastState = null;
+        this.lobbyState = null;
     }
 
     async init() {
@@ -30,14 +32,13 @@ class GameClient {
         const urlParams = new URLSearchParams(window.location.search);
         let roomId = urlParams.get('room');
         if (!roomId) {
-            // Generate a random room ID and update URL
             roomId = this.generateRoomId();
             const newUrl = `${window.location.pathname}?room=${roomId}`;
             window.history.replaceState({}, '', newUrl);
         }
 
         this.network = new NetworkManager({
-            onRole: (role) => this.onRole(role),
+            onRole: (role, playerId) => this.onRole(role, playerId),
             onLobby: (data) => this.onLobby(data),
             onInit: (data) => this.onInit(data),
             onCountdown: (count) => this.onCountdown(count),
@@ -73,7 +74,7 @@ class GameClient {
             this.lastInputSendTime = now;
         }
 
-        // Handle restart
+        // Handle restart — go back to lobby
         if (this.gameState === GAME_STATE.GAME_OVER && this.input.isRestartPressed()) {
             this.network.sendRestart();
         }
@@ -140,17 +141,52 @@ class GameClient {
         }
     }
 
+    getLobbyCallbacks() {
+        return {
+            onSelectRole: (role) => {
+                this.network.sendSelectRole(role);
+            },
+            onStart: () => {
+                this.network.sendStart();
+            }
+        };
+    }
+
+    renderLobby() {
+        if (!this.lobbyState) return;
+        const state = {
+            ...this.lobbyState,
+            myId: this.playerId,
+            myRole: this.role,
+        };
+        this.renderer.showLobby(state, this.getLobbyCallbacks());
+    }
+
     // --- Network callbacks ---
-    onRole(role) {
+    onRole(role, playerId) {
+        this.playerId = playerId;
         this.role = role;
-        this.renderer.showLobby(role);
+        // Don't render lobby yet — wait for lobby state broadcast
     }
 
     onLobby(data) {
-        // Update waiting text if both players present
-        if (data.hasTeacher && data.hasPupil) {
-            const waitText = this.renderer.uiLayer?.getChildByName?.('waitText');
-            if (waitText) waitText.text = 'Both players connected!';
+        this.lobbyState = data;
+
+        // Update own role from lobby state
+        if (data.teacherId === this.playerId) {
+            this.role = 'teacher';
+        } else if (data.pupilId === this.playerId) {
+            this.role = 'pupil';
+        } else {
+            this.role = 'unassigned';
+        }
+
+        // If we're in lobby or just got reset from game over, re-render lobby
+        if (this.gameState === GAME_STATE.LOBBY || this.gameState === GAME_STATE.GAME_OVER) {
+            this.gameState = GAME_STATE.LOBBY;
+            this.renderer.app.canvas.style.cursor = '';
+            this.renderer.cleanupGame();
+            this.renderLobby();
         }
     }
 

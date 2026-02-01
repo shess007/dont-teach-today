@@ -651,53 +651,204 @@ export class GameRenderer {
     }
 
     // --- Lobby / status screens ---
-    showLobby(role) {
+    // lobbyState: { myId, myRole, teacherTaken, pupilTaken, teacherId, pupilId, canStart }
+    // callbacks: { onSelectRole(role), onStart() }
+    showLobby(lobbyState, callbacks) {
         this.uiLayer.removeChildren();
+        this.app.stage.eventMode = 'static';
 
+        const cx = CONFIG.SCREEN.WIDTH / 2;
+
+        // Title
         const title = new PIXI.Text('RECESS REVENGE', {
             fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 68, fill: 0xffff00,
             fontWeight: 'bold', stroke: 0x000000, strokeThickness: 6,
             dropShadow: true, dropShadowColor: 0x000000, dropShadowBlur: 8, dropShadowDistance: 4
         });
         title.anchor.set(0.5);
-        title.x = CONFIG.SCREEN.WIDTH / 2;
-        title.y = 120;
+        title.x = cx; title.y = 80;
         this.uiLayer.addChild(title);
 
-        const roleLabel = role === 'teacher' ? 'TEACHER (WASD + Shift)' :
-                          role === 'pupil' ? 'PUPIL (Mouse + Click)' : 'SPECTATOR';
-        const roleColor = role === 'teacher' ? 0x3498db : role === 'pupil' ? 0xff4444 : 0xaaaaaa;
-
-        const roleText = new PIXI.Text(`You are the ${roleLabel}`, {
-            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 36, fill: roleColor,
-            fontWeight: 'bold', stroke: 0x000000, strokeThickness: 4
-        });
-        roleText.anchor.set(0.5);
-        roleText.x = CONFIG.SCREEN.WIDTH / 2;
-        roleText.y = 250;
-        this.uiLayer.addChild(roleText);
-
-        const waitText = new PIXI.Text('Waiting for opponent...', {
-            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 28, fill: 0xffffff,
+        // Subtitle
+        const subtitle = new PIXI.Text('Choose your role', {
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 28, fill: 0xcccccc,
             stroke: 0x000000, strokeThickness: 3
         });
-        waitText.anchor.set(0.5);
-        waitText.x = CONFIG.SCREEN.WIDTH / 2;
-        waitText.y = 350;
-        waitText.name = 'waitText';
-        this.uiLayer.addChild(waitText);
+        subtitle.anchor.set(0.5);
+        subtitle.x = cx; subtitle.y = 150;
+        this.uiLayer.addChild(subtitle);
+
+        // Role cards
+        const cardW = 240, cardH = 220, cardGap = 60;
+        const cardsY = 220;
+        const teacherX = cx - cardW - cardGap / 2;
+        const pupilX = cx + cardGap / 2;
+
+        this._createRoleCard(
+            teacherX, cardsY, cardW, cardH,
+            'TEACHER', 'WASD + Shift\nDodge the eggs!\nReach the school!',
+            0x3498db, 0x1a6da8,
+            lobbyState, 'teacher', callbacks
+        );
+
+        this._createRoleCard(
+            pupilX, cardsY, cardW, cardH,
+            'PUPIL', 'Mouse + Click\nThrow eggs!\nStop the teacher!',
+            0xe74c3c, 0xb33a2e,
+            lobbyState, 'pupil', callbacks
+        );
+
+        // Start button (only when both roles taken)
+        if (lobbyState.canStart) {
+            const btnW = 260, btnH = 60;
+            const btnX = cx - btnW / 2, btnY = 480;
+
+            const startBtn = new PIXI.Container();
+            const btnBg = new PIXI.Graphics();
+            btnBg.beginFill(0x27ae60);
+            btnBg.drawRoundedRect(0, 0, btnW, btnH, 12);
+            btnBg.endFill();
+            btnBg.lineStyle(3, 0x2ecc71);
+            btnBg.drawRoundedRect(0, 0, btnW, btnH, 12);
+            startBtn.addChild(btnBg);
+
+            const btnText = new PIXI.Text('START GAME', {
+                fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 32, fill: 0xffffff,
+                fontWeight: 'bold', stroke: 0x000000, strokeThickness: 3
+            });
+            btnText.anchor.set(0.5);
+            btnText.x = btnW / 2; btnText.y = btnH / 2;
+            startBtn.addChild(btnText);
+
+            startBtn.x = btnX; startBtn.y = btnY;
+            startBtn.eventMode = 'static';
+            startBtn.cursor = 'pointer';
+            startBtn.on('pointerdown', () => callbacks?.onStart?.());
+            startBtn.on('pointerover', () => { btnBg.tint = 0xdddddd; });
+            startBtn.on('pointerout', () => { btnBg.tint = 0xffffff; });
+
+            this.uiLayer.addChild(startBtn);
+        } else {
+            const waitText = new PIXI.Text('Waiting for both players to pick a role...', {
+                fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 22, fill: 0x888888,
+                stroke: 0x000000, strokeThickness: 2
+            });
+            waitText.anchor.set(0.5);
+            waitText.x = cx; waitText.y = 500;
+            this.uiLayer.addChild(waitText);
+        }
 
         // Room code
         const urlParams = new URLSearchParams(window.location.search);
         const roomId = urlParams.get('room') || 'default';
-        const roomText = new PIXI.Text(`Room: ${roomId}\nShare this URL to invite a friend!`, {
-            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 20, fill: 0xaaaaaa,
-            align: 'center', stroke: 0x000000, strokeThickness: 2
+        const roomText = new PIXI.Text(`Room: ${roomId}  |  Share this URL to invite a friend!`, {
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 18, fill: 0x888888,
+            stroke: 0x000000, strokeThickness: 2
         });
         roomText.anchor.set(0.5);
-        roomText.x = CONFIG.SCREEN.WIDTH / 2;
-        roomText.y = 450;
+        roomText.x = cx; roomText.y = 580;
         this.uiLayer.addChild(roomText);
+
+        // Player count
+        const countText = new PIXI.Text(`Players in room: ${lobbyState.playerCount || 1}`, {
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 18, fill: 0x666666,
+            stroke: 0x000000, strokeThickness: 2
+        });
+        countText.anchor.set(0.5);
+        countText.x = cx; countText.y = 615;
+        this.uiLayer.addChild(countText);
+    }
+
+    _createRoleCard(x, y, w, h, roleName, description, color, darkColor, lobbyState, role, callbacks) {
+        const myId = lobbyState.myId;
+        const isTaken = role === 'teacher' ? lobbyState.teacherTaken : lobbyState.pupilTaken;
+        const takenById = role === 'teacher' ? lobbyState.teacherId : lobbyState.pupilId;
+        const isMe = takenById === myId;
+        const isAvailable = !isTaken;
+        const canClick = isAvailable || isMe; // Can click to select or deselect
+
+        const card = new PIXI.Container();
+
+        // Card background
+        const bg = new PIXI.Graphics();
+        if (isMe) {
+            // Selected by me - bright border
+            bg.beginFill(darkColor, 0.9);
+            bg.drawRoundedRect(0, 0, w, h, 12);
+            bg.endFill();
+            bg.lineStyle(4, color);
+            bg.drawRoundedRect(0, 0, w, h, 12);
+        } else if (isTaken) {
+            // Taken by other - grayed out
+            bg.beginFill(0x333333, 0.7);
+            bg.drawRoundedRect(0, 0, w, h, 12);
+            bg.endFill();
+            bg.lineStyle(2, 0x555555);
+            bg.drawRoundedRect(0, 0, w, h, 12);
+        } else {
+            // Available
+            bg.beginFill(0x222222, 0.8);
+            bg.drawRoundedRect(0, 0, w, h, 12);
+            bg.endFill();
+            bg.lineStyle(3, color, 0.6);
+            bg.drawRoundedRect(0, 0, w, h, 12);
+        }
+        card.addChild(bg);
+
+        // Role name
+        const nameText = new PIXI.Text(roleName, {
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 36,
+            fill: isMe ? 0xffffff : (isTaken ? 0x666666 : color),
+            fontWeight: 'bold', stroke: 0x000000, strokeThickness: 4
+        });
+        nameText.anchor.set(0.5, 0);
+        nameText.x = w / 2; nameText.y = 20;
+        card.addChild(nameText);
+
+        // Description
+        const descText = new PIXI.Text(description, {
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 16,
+            fill: isTaken && !isMe ? 0x555555 : 0xcccccc,
+            align: 'center', stroke: 0x000000, strokeThickness: 2,
+            lineHeight: 22
+        });
+        descText.anchor.set(0.5, 0);
+        descText.x = w / 2; descText.y = 70;
+        card.addChild(descText);
+
+        // Status line
+        let statusStr, statusColor;
+        if (isMe) {
+            statusStr = 'SELECTED';
+            statusColor = 0x2ecc71;
+        } else if (isTaken) {
+            statusStr = 'TAKEN';
+            statusColor = 0x666666;
+        } else {
+            statusStr = 'CLICK TO SELECT';
+            statusColor = color;
+        }
+
+        const statusText = new PIXI.Text(statusStr, {
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 18,
+            fill: statusColor, fontWeight: 'bold',
+            stroke: 0x000000, strokeThickness: 2
+        });
+        statusText.anchor.set(0.5);
+        statusText.x = w / 2; statusText.y = h - 30;
+        card.addChild(statusText);
+
+        card.x = x; card.y = y;
+
+        if (canClick) {
+            card.eventMode = 'static';
+            card.cursor = 'pointer';
+            card.on('pointerdown', () => callbacks?.onSelectRole?.(role));
+            card.on('pointerover', () => { bg.tint = 0xcccccc; });
+            card.on('pointerout', () => { bg.tint = 0xffffff; });
+        }
+
+        this.uiLayer.addChild(card);
     }
 
     showCountdown(count) {
@@ -728,7 +879,7 @@ export class GameRenderer {
             : 'PUPIL WINS!\nTime ran out!';
         const winnerColor = winner === WINNER.TEACHER ? 0x3498db : 0xffd700;
 
-        const text = new PIXI.Text(winnerText + '\n\nPress SPACE to play again', {
+        const text = new PIXI.Text(winnerText + '\n\nPress SPACE to return to lobby', {
             fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: CONFIG.UI.FONT_SIZE_LARGE,
             fill: winnerColor, align: 'center', fontWeight: 'bold',
             stroke: 0x000000, strokeThickness: 6,

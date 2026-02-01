@@ -43,7 +43,7 @@ export class NetworkManager {
             case "role":
                 this.playerId = data.playerId;
                 this.role = data.role;
-                this.callbacks.onRole?.(data.role);
+                this.callbacks.onRole?.(data.role, data.playerId);
                 break;
             case "lobby":
                 this.callbacks.onLobby?.(data);
@@ -69,6 +69,16 @@ export class NetworkManager {
     sendInput(input) {
         if (!this.connected || !this.socket) return;
         this.socket.send(JSON.stringify({ type: "input", input }));
+    }
+
+    sendSelectRole(role) {
+        if (!this.connected || !this.socket) return;
+        this.socket.send(JSON.stringify({ type: "selectRole", role }));
+    }
+
+    sendStart() {
+        if (!this.connected || !this.socket) return;
+        this.socket.send(JSON.stringify({ type: "start" }));
     }
 
     sendRestart() {
