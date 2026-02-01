@@ -576,6 +576,15 @@ export class GameRenderer {
         this.eggCountText.y = 20;
         this.uiLayer.addChild(this.eggCountText);
 
+        this.musicHintText = new PIXI.Text('[M] Music: ON', {
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 18,
+            fill: 0xffffff, stroke: 0x000000, strokeThickness: 4
+        });
+        this.musicHintText.anchor.set(1, 1);
+        this.musicHintText.x = CONFIG.SCREEN.WIDTH - 10;
+        this.musicHintText.y = CONFIG.SCREEN.HEIGHT - 10;
+        this.uiLayer.addChild(this.musicHintText);
+
         this.sprintMeterGraphics = new PIXI.Graphics();
         this.uiLayer.addChild(this.sprintMeterGraphics);
 
@@ -618,6 +627,13 @@ export class GameRenderer {
             if (state.pupil.eggs === 0) this.eggCountText.style.fill = 0xff0000;
             else if (state.pupil.eggs === 1) this.eggCountText.style.fill = 0xffaa00;
             else this.eggCountText.style.fill = 0xffffff;
+        }
+
+        // Music hint
+        if (this.musicHintText) {
+            const muted = this.audio.musicMuted;
+            this.musicHintText.text = muted ? '[M] Music: OFF' : '[M] Music: ON';
+            this.musicHintText.style.fill = muted ? 0x999999 : 0xffffff;
         }
 
         // Sprint meter
@@ -873,6 +889,7 @@ export class GameRenderer {
         this.eggCountText = null;
         this.sprintMeterGraphics = null;
         this.sprintMeterText = null;
+        this.musicHintText = null;
 
         const winnerText = winner === WINNER.TEACHER
             ? 'TEACHER WINS!\nReached the school!'
