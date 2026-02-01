@@ -705,6 +705,11 @@ class Game {
         const particles = new ImpactParticles(hitPos.x, hitPos.y, this.effectsLayer, CONFIG.COLORS.EGG_SPLAT);
         this.splats.push(particles); // Reuse splats array for particles
 
+        // Pupil celebrates the hit
+        if (this.pupil) {
+            this.pupil.celebrate();
+        }
+
         // Respawn teacher at starting position
         this.teacher.respawn();
 
@@ -790,11 +795,14 @@ class Game {
         // Stop background music
         this.audio.stopMusic();
 
-        // Play win sound
+        // Play win sound and celebrate
         if (winner === WINNER.TEACHER) {
             this.audio.playSound('teacherWin');
         } else {
             this.audio.playSound('pupilWin');
+            if (this.pupil) {
+                this.pupil.celebrate();
+            }
         }
 
         // Clear UI (including all UI elements)
