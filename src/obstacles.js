@@ -290,9 +290,9 @@ function createObstacles(container) {
         return true;
     };
 
-    // Add chicken coop (top or bottom edge)
-    const coopY = Math.random() < 0.5 ? 20 : height - 100;
-    const coopX = width / 2 - 40;
+    // Add chicken coop (top-right corner)
+    const coopY = 20;
+    const coopX = width - 200 - CONFIG.OBSTACLES.CHICKEN_COOP.WIDTH;
     obstacles.push(new Obstacle('CHICKEN_COOP', coopX, coopY, container));
 
     // Add bushes (garden clusters and hiding spots along paths)
