@@ -375,26 +375,25 @@ export class GameRenderer {
 
         // Crosshair (only visible for pupil player)
         if (this.crosshairSprite) {
-            if (role === 'pupil') {
-                this.crosshairSprite.visible = true;
-                this.crosshairSprite.x = state.crossX;
-                this.crosshairSprite.y = state.crossY;
+            this.crosshairSprite.visible = true;
+            this.crosshairSprite.x = state.crossX;
+            this.crosshairSprite.y = state.crossY;
 
+            if (role === 'pupil') {
                 if (state.refilling) {
                     const pulse = Math.sin(Date.now() / 100) * 0.2 + 1.0;
                     this.crosshairSprite.scale.set(pulse);
                     this.crosshairSprite.tint = 0x00ff00;
+                    this.crosshairSprite.alpha = 0.8;
                 } else {
-                    this.crosshairSprite.tint = 0xffffff;
+                    this.crosshairSprite.tint = 0xff4444;
+                    this.crosshairSprite.alpha = 0.5;
                     this.crosshairSprite.scale.set(1.0);
                 }
             } else {
-                // Other players see crosshair too (but could hide)
-                this.crosshairSprite.visible = true;
-                this.crosshairSprite.x = state.crossX;
-                this.crosshairSprite.y = state.crossY;
                 this.crosshairSprite.tint = 0xff4444;
                 this.crosshairSprite.alpha = 0.5;
+                this.crosshairSprite.scale.set(1.0);
             }
         }
 

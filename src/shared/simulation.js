@@ -25,7 +25,7 @@ function createObstacleLayout() {
     };
 
     // Chicken coop (always top-center for determinism)
-    const coopX = width / 2 - 40;
+    const coopX = width / 2 - CONFIG.OBSTACLES.CHICKEN_COOP.WIDTH / 2;
     const coopY = 20;
     obstacles.push({
         type: 'CHICKEN_COOP', x: coopX, y: coopY,

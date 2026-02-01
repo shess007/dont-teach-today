@@ -77,12 +77,10 @@ export class InputManager {
 
     // Serialize pupil inputs for network
     getPupilInput() {
-        const clicked = this.mouseClicked;
-        this.mouseClicked = false; // consume click
         return {
             mouseX: this.mouseX,
             mouseY: this.mouseY,
-            click: clicked,
+            click: this.mouseDown,
         };
     }
 

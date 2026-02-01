@@ -8,6 +8,7 @@ const TICK_MS = 1000 / TICK_RATE;
 interface PlayerInfo {
   role: "teacher" | "pupil" | "spectator";
   lastInput: any;
+  prevClick: boolean; // track previous tick's click state for edge detection
 }
 
 export default class RecessRevengeServer implements Party.Server {
@@ -25,6 +26,7 @@ export default class RecessRevengeServer implements Party.Server {
     const player: PlayerInfo = {
       role: "spectator",
       lastInput: null,
+      prevClick: false,
     };
 
     // Assign role based on who's already connected
@@ -188,7 +190,14 @@ export default class RecessRevengeServer implements Party.Server {
   getPlayerInput(role: string): any {
     for (const [, player] of this.players) {
       if (player.role === role && player.lastInput) {
-        return player.lastInput;
+        const input = { ...player.lastInput };
+        // For pupil: detect rising edge (mouseDown goes from false to true)
+        if (role === "pupil") {
+          const isDown = !!input.click;
+          input.click = isDown && !player.prevClick;
+          player.prevClick = isDown;
+        }
+        return input;
       }
     }
     // Default inputs
