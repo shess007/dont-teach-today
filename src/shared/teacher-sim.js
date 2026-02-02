@@ -4,9 +4,13 @@ import { CONFIG } from './config.js';
 import { Utils } from './utils.js';
 
 export class TeacherSimulation {
-    constructor() {
-        this.x = CONFIG.TEACHER.SPAWN_X;
-        this.y = CONFIG.TEACHER.SPAWN_Y;
+    constructor(slotIndex = 0) {
+        this.slotIndex = slotIndex;
+        const spawn = CONFIG.TEACHER.SPAWN_POSITIONS[slotIndex] || { x: CONFIG.TEACHER.SPAWN_X, y: CONFIG.TEACHER.SPAWN_Y };
+        this.spawnX = spawn.x;
+        this.spawnY = spawn.y;
+        this.x = this.spawnX;
+        this.y = this.spawnY;
         this.velocityX = 0;
         this.velocityY = 0;
 
@@ -162,8 +166,8 @@ export class TeacherSimulation {
     }
 
     respawn() {
-        this.x = CONFIG.TEACHER.SPAWN_X;
-        this.y = CONFIG.TEACHER.SPAWN_Y;
+        this.x = this.spawnX;
+        this.y = this.spawnY;
         this.velocityX = 0;
         this.velocityY = 0;
         this.isInvulnerable = true;
@@ -183,6 +187,7 @@ export class TeacherSimulation {
 
     serialize() {
         return {
+            slot: this.slotIndex,
             x: Math.round(this.x * 10) / 10,
             y: Math.round(this.y * 10) / 10,
             vx: Math.round(this.velocityX * 10) / 10,

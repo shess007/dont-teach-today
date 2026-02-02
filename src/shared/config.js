@@ -22,14 +22,22 @@ export const CONFIG = {
         HITBOX_RADIUS: 16,
         SPAWN_X: 110,
         SPAWN_Y: 396,
-        GOAL_X: 1298
+        GOAL_X: 1298,
+        SPAWN_POSITIONS: [
+            { x: 110, y: 200 },
+            { x: 110, y: 592 }
+        ]
     },
     PUPIL: {
         STARTING_EGGS: 5,
         MAX_EGGS: 5,
         EGG_COOLDOWN: 0.8,
         REFILL_DELAY: 0.75,
-        REFILL_AMOUNT: 2
+        REFILL_AMOUNT: 2,
+        THROW_POSITIONS: [
+            { x: 1368, y: 60 },
+            { x: 1368, y: 752 }
+        ]
     },
     EGG: {
         SPEED: 1200,
@@ -91,3 +99,26 @@ export const WINNER = {
     TEACHER: 'teacher',
     PUPIL: 'pupil'
 };
+
+export const ROLES = {
+    TEACHER1: 'teacher1',
+    TEACHER2: 'teacher2',
+    PUPIL1: 'pupil1',
+    PUPIL2: 'pupil2',
+    UNASSIGNED: 'unassigned',
+};
+
+export const TEACHER_ROLES = [ROLES.TEACHER1, ROLES.TEACHER2];
+export const PUPIL_ROLES = [ROLES.PUPIL1, ROLES.PUPIL2];
+
+export function roleTeam(role) {
+    if (role === ROLES.TEACHER1 || role === ROLES.TEACHER2) return 'teacher';
+    if (role === ROLES.PUPIL1 || role === ROLES.PUPIL2) return 'pupil';
+    return null;
+}
+
+export function roleIndex(role) {
+    if (role === ROLES.TEACHER1 || role === ROLES.PUPIL1) return 0;
+    if (role === ROLES.TEACHER2 || role === ROLES.PUPIL2) return 1;
+    return -1;
+}

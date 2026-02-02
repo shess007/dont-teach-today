@@ -49,16 +49,26 @@ export class StateInterpolator {
         // Deep copy stateB as base
         const result = JSON.parse(JSON.stringify(stateB));
 
-        // Interpolate teacher position
-        if (stateA.teacher && stateB.teacher) {
-            result.teacher.x = lerp(stateA.teacher.x, stateB.teacher.x, t);
-            result.teacher.y = lerp(stateA.teacher.y, stateB.teacher.y, t);
+        // Interpolate teachers array
+        if (stateA.teachers && stateB.teachers) {
+            for (let i = 0; i < result.teachers.length; i++) {
+                const matchA = stateA.teachers.find(t => t.slot === result.teachers[i].slot);
+                if (matchA) {
+                    result.teachers[i].x = lerp(matchA.x, result.teachers[i].x, t);
+                    result.teachers[i].y = lerp(matchA.y, result.teachers[i].y, t);
+                }
+            }
         }
 
-        // Interpolate pupil crosshair
-        if (stateA.pupil && stateB.pupil) {
-            result.pupil.crossX = lerp(stateA.pupil.crossX, stateB.pupil.crossX, t);
-            result.pupil.crossY = lerp(stateA.pupil.crossY, stateB.pupil.crossY, t);
+        // Interpolate pupils array (crosshairs)
+        if (stateA.pupils && stateB.pupils) {
+            for (let i = 0; i < result.pupils.length; i++) {
+                const matchA = stateA.pupils.find(p => p.slot === result.pupils[i].slot);
+                if (matchA) {
+                    result.pupils[i].crossX = lerp(matchA.crossX, result.pupils[i].crossX, t);
+                    result.pupils[i].crossY = lerp(matchA.crossY, result.pupils[i].crossY, t);
+                }
+            }
         }
 
         // Interpolate projectile positions

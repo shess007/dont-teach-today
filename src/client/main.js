@@ -1,6 +1,6 @@
 // RECESS REVENGE - Client Entry Point
 
-import { GAME_STATE, WINNER } from '../shared/config.js';
+import { GAME_STATE, WINNER, roleTeam } from '../shared/config.js';
 import { NetworkManager } from './network.js';
 import { GameRenderer } from './renderer.js';
 import { InputManager } from './input.js';
@@ -21,6 +21,8 @@ class GameClient {
         this.lastState = null;
         this.lobbyState = null;
         this.prevMusicToggle = false;
+        this.teacherCount = 1;
+        this.pupilCount = 1;
     }
 
     async init() {
@@ -43,7 +45,7 @@ class GameClient {
             onLobby: (data) => this.onLobby(data),
             onInit: (data) => this.onInit(data),
             onCountdown: (count) => this.onCountdown(count),
-            onStart: () => this.onGameStart(),
+            onStart: (data) => this.onGameStart(data),
             onState: (state) => this.onState(state),
             onDisconnected: (data) => this.onDisconnected(data),
         });
@@ -100,18 +102,19 @@ class GameClient {
     }
 
     sendInputs() {
-        if (this.role === 'teacher') {
+        const team = roleTeam(this.role);
+        if (team === 'teacher') {
             this.network.sendInput(this.input.getTeacherInput());
-        } else if (this.role === 'pupil') {
+        } else if (team === 'pupil') {
             this.network.sendInput(this.input.getPupilInput());
         }
     }
 
     renderGameState(state, deltaTime) {
-        this.renderer.renderTeacher(state.teacher);
-        this.renderer.renderPupil(state.pupil, this.role);
+        this.renderer.renderTeachers(state.teachers);
+        this.renderer.renderPupils(state.pupils, this.role, state.eggPool);
         this.renderer.renderProjectiles(state.projectiles);
-        this.renderer.renderUI(state);
+        this.renderer.renderUI(state, this.role);
 
         // Process events
         if (state.events) {
@@ -180,13 +183,14 @@ class GameClient {
     onLobby(data) {
         this.lobbyState = data;
 
-        // Update own role from lobby state
-        if (data.teacherId === this.playerId) {
-            this.role = 'teacher';
-        } else if (data.pupilId === this.playerId) {
-            this.role = 'pupil';
-        } else {
-            this.role = 'unassigned';
+        // Derive own role from the 4 slot fields
+        const slots = ['teacher1', 'teacher2', 'pupil1', 'pupil2'];
+        this.role = 'unassigned';
+        for (const slotName of slots) {
+            if (data[slotName] && data[slotName].playerId === this.playerId) {
+                this.role = slotName;
+                break;
+            }
         }
 
         // If we're in lobby or just got reset from game over, re-render lobby
@@ -206,13 +210,15 @@ class GameClient {
         this.renderer.showCountdown(count);
     }
 
-    onGameStart() {
+    onGameStart(data) {
         this.gameState = GAME_STATE.PLAYING;
+        this.teacherCount = data?.teacherCount || 1;
+        this.pupilCount = data?.pupilCount || 1;
         this.renderer.audio.init();
         this.renderer.audio.startMusic();
-        this.renderer.setupGame();
+        this.renderer.setupGame(this.role, this.teacherCount, this.pupilCount);
         // Hide cursor for pupil (crosshair replaces it)
-        if (this.role === 'pupil') {
+        if (roleTeam(this.role) === 'pupil') {
             this.renderer.app.canvas.style.cursor = 'none';
         }
     }

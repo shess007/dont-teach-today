@@ -5,10 +5,28 @@ import { GAME_STATE } from "../shared/config.js";
 const TICK_RATE = 20; // 20Hz server tick
 const TICK_MS = 1000 / TICK_RATE;
 
+const VALID_ROLES = ["teacher1", "teacher2", "pupil1", "pupil2"] as const;
+const TEACHER_ROLES = ["teacher1", "teacher2"] as const;
+const PUPIL_ROLES = ["pupil1", "pupil2"] as const;
+
+type Role = typeof VALID_ROLES[number] | "unassigned";
+
 interface PlayerInfo {
-  role: "teacher" | "pupil" | "unassigned";
+  role: Role;
   lastInput: any;
   prevClick: boolean;
+}
+
+function roleSlot(role: string): number {
+  if (role === "teacher1" || role === "pupil1") return 0;
+  if (role === "teacher2" || role === "pupil2") return 1;
+  return -1;
+}
+
+function roleTeam(role: string): string | null {
+  if (role === "teacher1" || role === "teacher2") return "teacher";
+  if (role === "pupil1" || role === "pupil2") return "pupil";
+  return null;
 }
 
 export default class RecessRevengeServer implements Party.Server {
@@ -58,15 +76,14 @@ export default class RecessRevengeServer implements Party.Server {
         case "selectRole": {
           if (this.simulation.state !== GAME_STATE.LOBBY) break;
           const requestedRole = data.role;
-          if (requestedRole !== "teacher" && requestedRole !== "pupil") break;
+          if (!(VALID_ROLES as readonly string[]).includes(requestedRole)) break;
 
-          // Check if role is available
+          // Check if this specific slot is available
           const roleTaken = [...this.players.entries()].some(
             ([id, p]) => id !== sender.id && p.role === requestedRole
           );
           if (roleTaken) break;
 
-          // If player had a different role, free it
           player.role = requestedRole;
           this.broadcastLobbyState();
           break;
@@ -105,16 +122,18 @@ export default class RecessRevengeServer implements Party.Server {
     const player = this.players.get(connection.id);
     this.players.delete(connection.id);
 
-    if (player && (player.role === "teacher" || player.role === "pupil")) {
+    if (player && player.role !== "unassigned") {
       // If game was playing, end it
       if (this.simulation.state === GAME_STATE.PLAYING) {
         this.stopGameLoop();
         this.simulation.state = GAME_STATE.LOBBY;
 
+        const team = roleTeam(player.role);
+        const label = team === "teacher" ? "A teacher" : "A pupil";
         this.room.broadcast(JSON.stringify({
           type: "disconnected",
           role: player.role,
-          message: `${player.role === "teacher" ? "Teacher" : "Pupil"} disconnected.`,
+          message: `${label} disconnected.`,
         }));
       }
 
@@ -131,21 +150,25 @@ export default class RecessRevengeServer implements Party.Server {
 
   hasAllPlayers(): boolean {
     const roles = [...this.players.values()].map(p => p.role);
-    return roles.includes("teacher") && roles.includes("pupil");
+    const hasTeacher = roles.some(r => (TEACHER_ROLES as readonly string[]).includes(r));
+    const hasPupil = roles.some(r => (PUPIL_ROLES as readonly string[]).includes(r));
+    return hasTeacher && hasPupil;
+  }
+
+  getSlotInfo(role: string): { taken: boolean; playerId: string | null } {
+    const entry = [...this.players.entries()].find(([, p]) => p.role === role);
+    return { taken: !!entry, playerId: entry?.[0] || null };
   }
 
   broadcastLobbyState() {
-    const teacherPlayer = [...this.players.entries()].find(([, p]) => p.role === "teacher");
-    const pupilPlayer = [...this.players.entries()].find(([, p]) => p.role === "pupil");
-
     this.room.broadcast(JSON.stringify({
       type: "lobby",
       playerCount: this.players.size,
-      teacherTaken: !!teacherPlayer,
-      pupilTaken: !!pupilPlayer,
-      teacherId: teacherPlayer?.[0] || null,
-      pupilId: pupilPlayer?.[0] || null,
-      canStart: !!teacherPlayer && !!pupilPlayer,
+      teacher1: this.getSlotInfo("teacher1"),
+      teacher2: this.getSlotInfo("teacher2"),
+      pupil1: this.getSlotInfo("pupil1"),
+      pupil2: this.getSlotInfo("pupil2"),
+      canStart: this.hasAllPlayers(),
     }));
   }
 
@@ -174,10 +197,16 @@ export default class RecessRevengeServer implements Party.Server {
   }
 
   startGame() {
-    this.simulation.startGame();
+    const roles = [...this.players.values()].map(p => p.role);
+    const teacherCount = roles.filter(r => (TEACHER_ROLES as readonly string[]).includes(r)).length;
+    const pupilCount = roles.filter(r => (PUPIL_ROLES as readonly string[]).includes(r)).length;
+
+    this.simulation.startGame(teacherCount, pupilCount);
 
     this.room.broadcast(JSON.stringify({
       type: "start",
+      teacherCount,
+      pupilCount,
     }));
 
     this.startGameLoop();
@@ -204,12 +233,28 @@ export default class RecessRevengeServer implements Party.Server {
       return;
     }
 
-    // Gather inputs
-    const teacherInput = this.getPlayerInput("teacher");
-    const pupilInput = this.getPlayerInput("pupil");
+    // Gather inputs per slot
+    const teacherInputs: Record<number, any> = {};
+    const pupilInputs: Record<number, any> = {};
+
+    for (const [, player] of this.players) {
+      const team = roleTeam(player.role);
+      const slot = roleSlot(player.role);
+
+      if (team === "teacher") {
+        teacherInputs[slot] = player.lastInput || { up: false, down: false, left: false, right: false, sprint: false };
+      } else if (team === "pupil") {
+        const input = { ...(player.lastInput || { mouseX: 0, mouseY: 0, click: false }) };
+        // Edge detection for click
+        const isDown = !!input.click;
+        input.click = isDown && !player.prevClick;
+        player.prevClick = isDown;
+        pupilInputs[slot] = input;
+      }
+    }
 
     const deltaTime = 1 / TICK_RATE;
-    this.simulation.update(deltaTime, teacherInput, pupilInput);
+    this.simulation.update(deltaTime, teacherInputs, pupilInputs);
 
     // Broadcast state
     const state = this.simulation.serialize();
@@ -219,25 +264,5 @@ export default class RecessRevengeServer implements Party.Server {
     if (this.simulation.state === GAME_STATE.GAME_OVER) {
       this.stopGameLoop();
     }
-  }
-
-  getPlayerInput(role: string): any {
-    for (const [, player] of this.players) {
-      if (player.role === role && player.lastInput) {
-        const input = { ...player.lastInput };
-        // For pupil: detect rising edge (mouseDown goes from false to true)
-        if (role === "pupil") {
-          const isDown = !!input.click;
-          input.click = isDown && !player.prevClick;
-          player.prevClick = isDown;
-        }
-        return input;
-      }
-    }
-    // Default inputs
-    if (role === "teacher") {
-      return { up: false, down: false, left: false, right: false, sprint: false };
-    }
-    return { mouseX: 0, mouseY: 0, click: false };
   }
 }

@@ -1,6 +1,6 @@
 // RECESS REVENGE - Client Renderer (PixiJS rendering orchestrator)
 
-import { CONFIG, GAME_STATE, WINNER } from '../shared/config.js';
+import { CONFIG, GAME_STATE, WINNER, roleTeam, roleIndex } from '../shared/config.js';
 import { AudioManager } from './audio.js';
 
 // PixiJS loaded via CDN globally
@@ -27,11 +27,13 @@ export class GameRenderer {
         this.effectsLayer = null;
         this.uiLayer = null;
 
-        // Game object renderers
-        this.teacherSprite = null;
-        this.pupilSprite = null;
-        this.crosshairSprite = null;
-        this.trajectoryGraphics = null;
+        // Game object renderers — maps keyed by slot index
+        this.teacherSprites = new Map();
+        this.teacherAnims = new Map();
+        this.crosshairSprites = new Map();
+        this.trajectoryGraphicsMap = new Map();
+        this.pupilSprites = new Map();
+        this.pupilAnims = new Map();
         this.projectileSprites = new Map(); // id -> sprite
 
         // UI
@@ -39,11 +41,6 @@ export class GameRenderer {
         this.eggCountText = null;
         this.sprintMeterGraphics = null;
         this.sprintMeterText = null;
-
-        // State tracking for animation changes
-        this.currentTeacherAnim = null;
-        this.currentPupilAnim = null;
-        this.teacherFacingRight = true;
 
         // Effects
         this.splats = [];
@@ -235,94 +232,93 @@ export class GameRenderer {
     }
 
     // --- Teacher rendering ---
-    createTeacher() {
-        if (this.teacherSprite) {
-            this.gameLayer.removeChild(this.teacherSprite);
-            this.teacherSprite.destroy();
-        }
-
+    createTeacher(slot) {
+        let sprite;
         if (TEACHER_SPRITESHEET) {
             const textures = TEACHER_SPRITESHEET.animations.idle;
-            this.teacherSprite = new PIXI.AnimatedSprite(textures);
-            this.teacherSprite.anchor.set(0.5, 0.5);
-            this.teacherSprite.animationSpeed = 0.1;
-            this.teacherSprite.loop = true;
-            this.teacherSprite.play();
+            sprite = new PIXI.AnimatedSprite(textures);
+            sprite.anchor.set(0.5, 0.5);
+            sprite.animationSpeed = 0.1;
+            sprite.loop = true;
+            sprite.play();
             const scale = (CONFIG.TEACHER.SIZE * 2) / 64;
-            this.teacherSprite.scale.set(scale, scale);
+            sprite.scale.set(scale, scale);
         } else {
-            const g = new PIXI.Graphics();
-            g.beginFill(CONFIG.COLORS.TEACHER);
-            g.drawCircle(0, 0, CONFIG.TEACHER.HITBOX_RADIUS);
-            g.endFill();
-            this.teacherSprite = g;
+            sprite = new PIXI.Graphics();
+            sprite.beginFill(CONFIG.COLORS.TEACHER);
+            sprite.drawCircle(0, 0, CONFIG.TEACHER.HITBOX_RADIUS);
+            sprite.endFill();
         }
 
-        this.currentTeacherAnim = 'idle';
-        this.gameLayer.addChild(this.teacherSprite);
+        this.teacherSprites.set(slot, sprite);
+        this.teacherAnims.set(slot, 'idle');
+        this.gameLayer.addChild(sprite);
     }
 
-    renderTeacher(state) {
-        if (!this.teacherSprite || !state) return;
+    renderTeacher(state, slot) {
+        const sprite = this.teacherSprites.get(slot);
+        if (!sprite || !state) return;
 
-        this.teacherSprite.x = state.x;
-        this.teacherSprite.y = state.y;
+        sprite.x = state.x;
+        sprite.y = state.y;
 
         // Animation switch
-        if (state.anim !== this.currentTeacherAnim && TEACHER_SPRITESHEET) {
-            this.currentTeacherAnim = state.anim;
+        const currentAnim = this.teacherAnims.get(slot);
+        if (state.anim !== currentAnim && TEACHER_SPRITESHEET) {
+            this.teacherAnims.set(slot, state.anim);
             const newTextures = TEACHER_SPRITESHEET.animations[state.anim];
-            if (newTextures && this.teacherSprite.textures) {
-                this.teacherSprite.textures = newTextures;
-                this.teacherSprite.animationSpeed = state.anim === 'sprint' ? 0.2 : state.anim === 'walk' ? 0.15 : 0.1;
-                this.teacherSprite.play();
+            if (newTextures && sprite.textures) {
+                sprite.textures = newTextures;
+                sprite.animationSpeed = state.anim === 'sprint' ? 0.2 : state.anim === 'walk' ? 0.15 : 0.1;
+                sprite.play();
             }
         }
 
         // Facing direction
-        if (this.teacherSprite.textures) {
+        if (sprite.textures) {
             const baseScale = (CONFIG.TEACHER.SIZE * 2) / 64;
             const mult = state.sprint ? 1.15 : 1.0;
             const scaleX = state.facing ? baseScale * mult : -baseScale * mult;
-            this.teacherSprite.scale.set(scaleX, baseScale * mult);
+            sprite.scale.set(scaleX, baseScale * mult);
         }
 
         // Invulnerability flashing
         if (state.invuln) {
-            this.teacherSprite.alpha = Math.sin(Date.now() * 0.02) * 0.5 + 0.5;
+            sprite.alpha = Math.sin(Date.now() * 0.02) * 0.5 + 0.5;
         } else if (state.hidden) {
-            this.teacherSprite.alpha = 0.6;
-            this.teacherSprite.tint = CONFIG.COLORS.TEACHER_HIDDEN;
+            sprite.alpha = 0.6;
+            sprite.tint = CONFIG.COLORS.TEACHER_HIDDEN;
         } else {
-            this.teacherSprite.alpha = 1.0;
-            this.teacherSprite.tint = 0xffffff;
+            sprite.alpha = 1.0;
+            sprite.tint = 0xffffff;
+        }
+    }
+
+    renderTeachers(teachersState) {
+        if (!teachersState) return;
+        for (const t of teachersState) {
+            this.renderTeacher(t, t.slot);
         }
     }
 
     // --- Pupil rendering ---
-    createPupil() {
-        if (this.pupilSprite) {
-            this.gameLayer.removeChild(this.pupilSprite);
-            this.pupilSprite.destroy();
-        }
-
+    createPupil(slot) {
+        // Pupil character sprite
         if (PUPIL_SPRITESHEET) {
             const textures = PUPIL_SPRITESHEET.animations.idle;
-            this.pupilSprite = new PIXI.AnimatedSprite(textures);
-            this.pupilSprite.anchor.set(0.5, 0.5);
-            this.pupilSprite.animationSpeed = 0.1;
-            this.pupilSprite.loop = true;
-            this.pupilSprite.play();
-            this.pupilSprite.x = CONFIG.SCREEN.WIDTH - 60;
-            this.pupilSprite.y = CONFIG.SCREEN.HEIGHT - 60;
-            this.gameLayer.addChild(this.pupilSprite);
+            const sprite = new PIXI.AnimatedSprite(textures);
+            sprite.anchor.set(0.5, 0.5);
+            sprite.animationSpeed = 0.1;
+            sprite.loop = true;
+            sprite.play();
+            const throwPos = CONFIG.PUPIL.THROW_POSITIONS[slot] || { x: CONFIG.SCREEN.WIDTH - 60, y: CONFIG.SCREEN.HEIGHT - 60 };
+            sprite.x = throwPos.x;
+            sprite.y = throwPos.y;
+            this.gameLayer.addChild(sprite);
+            this.pupilSprites.set(slot, sprite);
         }
 
         // Crosshair
-        if (this.crosshairSprite) {
-            this.gameLayer.removeChild(this.crosshairSprite);
-            this.crosshairSprite.destroy();
-        }
         const ch = new PIXI.Graphics();
         ch.lineStyle(2, CONFIG.COLORS.CROSSHAIR, 1);
         ch.drawCircle(0, 0, 12);
@@ -333,67 +329,69 @@ export class GameRenderer {
         ch.beginFill(CONFIG.COLORS.CROSSHAIR);
         ch.drawCircle(0, 0, 2);
         ch.endFill();
-        this.crosshairSprite = ch;
-        this.gameLayer.addChild(this.crosshairSprite);
+        this.crosshairSprites.set(slot, ch);
+        this.gameLayer.addChild(ch);
 
         // Trajectory
-        if (this.trajectoryGraphics) {
-            this.gameLayer.removeChild(this.trajectoryGraphics);
-            this.trajectoryGraphics.destroy();
-        }
-        this.trajectoryGraphics = new PIXI.Graphics();
-        this.gameLayer.addChild(this.trajectoryGraphics);
+        const traj = new PIXI.Graphics();
+        this.trajectoryGraphicsMap.set(slot, traj);
+        this.gameLayer.addChild(traj);
 
-        this.currentPupilAnim = 'idle';
+        this.pupilAnims.set(slot, 'idle');
     }
 
-    renderPupil(state, role) {
+    renderPupil(state, slot, isLocal, eggPool) {
         if (!state) return;
 
         // Pupil sprite animation
-        if (this.pupilSprite && PUPIL_SPRITESHEET) {
-            if (state.anim !== this.currentPupilAnim) {
-                this.currentPupilAnim = state.anim;
+        const pupilSprite = this.pupilSprites.get(slot);
+        const currentAnim = this.pupilAnims.get(slot);
+        if (pupilSprite && PUPIL_SPRITESHEET) {
+            if (state.anim !== currentAnim) {
+                this.pupilAnims.set(slot, state.anim);
                 const newTextures = PUPIL_SPRITESHEET.animations[state.anim];
                 if (newTextures) {
-                    this.pupilSprite.textures = newTextures;
-                    this.pupilSprite.animationSpeed = state.anim === 'throw' ? 0.2 : 0.1;
-                    this.pupilSprite.loop = state.anim !== 'throw';
-                    this.pupilSprite.play();
+                    pupilSprite.textures = newTextures;
+                    pupilSprite.animationSpeed = state.anim === 'throw' ? 0.2 : 0.1;
+                    pupilSprite.loop = state.anim !== 'throw';
+                    pupilSprite.play();
                 }
             }
         }
 
-        // Crosshair (only visible for pupil player)
-        if (this.crosshairSprite) {
-            this.crosshairSprite.visible = true;
-            this.crosshairSprite.x = state.crossX;
-            this.crosshairSprite.y = state.crossY;
+        // Crosshair
+        const ch = this.crosshairSprites.get(slot);
+        if (ch) {
+            ch.visible = true;
+            ch.x = state.crossX;
+            ch.y = state.crossY;
 
-            if (role === 'pupil') {
-                if (state.refilling) {
+            if (isLocal) {
+                if (eggPool && eggPool.refilling) {
                     const pulse = Math.sin(Date.now() / 100) * 0.2 + 1.0;
-                    this.crosshairSprite.scale.set(pulse);
-                    this.crosshairSprite.tint = 0x00ff00;
-                    this.crosshairSprite.alpha = 0.8;
+                    ch.scale.set(pulse);
+                    ch.tint = 0x00ff00;
+                    ch.alpha = 0.8;
                 } else {
-                    this.crosshairSprite.tint = 0xff4444;
-                    this.crosshairSprite.alpha = 0.5;
-                    this.crosshairSprite.scale.set(1.0);
+                    ch.tint = 0xff4444;
+                    ch.alpha = 0.5;
+                    ch.scale.set(1.0);
                 }
             } else {
-                this.crosshairSprite.tint = 0xff4444;
-                this.crosshairSprite.alpha = 0.5;
-                this.crosshairSprite.scale.set(1.0);
+                // Other player's crosshair — dimmer and smaller
+                ch.tint = 0xff8800;
+                ch.alpha = 0.3;
+                ch.scale.set(0.7);
             }
         }
 
-        // Trajectory preview (only for pupil)
-        if (this.trajectoryGraphics) {
-            this.trajectoryGraphics.clear();
-            if (role === 'pupil' && state.eggs > 0 && state.canThrow) {
-                const startX = CONFIG.SCREEN.WIDTH - 40;
-                const startY = CONFIG.SCREEN.HEIGHT - 40;
+        // Trajectory preview (only for local pupil)
+        const traj = this.trajectoryGraphicsMap.get(slot);
+        if (traj) {
+            traj.clear();
+            if (isLocal && eggPool && eggPool.eggs > 0 && state.canThrow) {
+                const startX = state.throwX;
+                const startY = state.throwY;
                 const numPoints = 15;
                 for (let i = 0; i <= numPoints; i++) {
                     const t = i / numPoints;
@@ -403,11 +401,21 @@ export class GameRenderer {
                     const linearY = startY + dy * t;
                     const arcOffset = CONFIG.EGG.ARC_HEIGHT * 4 * t * (1 - t);
                     const y = linearY - arcOffset;
-                    this.trajectoryGraphics.beginFill(CONFIG.COLORS.TRAJECTORY, 0.6);
-                    this.trajectoryGraphics.drawCircle(x, y, 3);
-                    this.trajectoryGraphics.endFill();
+                    traj.beginFill(CONFIG.COLORS.TRAJECTORY, 0.6);
+                    traj.drawCircle(x, y, 3);
+                    traj.endFill();
                 }
             }
+        }
+    }
+
+    renderPupils(pupilsState, myRole, eggPool) {
+        if (!pupilsState) return;
+        const mySlot = roleIndex(myRole);
+        const myTeam = roleTeam(myRole);
+        for (const p of pupilsState) {
+            const isLocal = myTeam === 'pupil' && p.slot === mySlot;
+            this.renderPupil(p, p.slot, isLocal, eggPool);
         }
     }
 
@@ -542,7 +550,7 @@ export class GameRenderer {
     }
 
     // --- UI ---
-    createGameUI() {
+    createGameUI(myRole) {
         this.uiLayer.removeChildren();
 
         this.timerText = new PIXI.Text('', {
@@ -576,21 +584,28 @@ export class GameRenderer {
         this.musicHintText.y = CONFIG.SCREEN.HEIGHT - 10;
         this.uiLayer.addChild(this.musicHintText);
 
-        this.sprintMeterGraphics = new PIXI.Graphics();
-        this.uiLayer.addChild(this.sprintMeterGraphics);
+        // Sprint meter (shown for teacher players)
+        const team = roleTeam(myRole);
+        if (team === 'teacher') {
+            this.sprintMeterGraphics = new PIXI.Graphics();
+            this.uiLayer.addChild(this.sprintMeterGraphics);
 
-        this.sprintMeterText = new PIXI.Text('SPRINT', {
-            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: CONFIG.UI.FONT_SIZE_SMALL,
-            fill: 0xffffff, fontWeight: 'bold',
-            stroke: 0x000000, strokeThickness: 3,
-            dropShadow: true, dropShadowColor: 0x000000, dropShadowBlur: 4, dropShadowDistance: 2
-        });
-        this.sprintMeterText.x = 20;
-        this.sprintMeterText.y = 20;
-        this.uiLayer.addChild(this.sprintMeterText);
+            this.sprintMeterText = new PIXI.Text('SPRINT', {
+                fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: CONFIG.UI.FONT_SIZE_SMALL,
+                fill: 0xffffff, fontWeight: 'bold',
+                stroke: 0x000000, strokeThickness: 3,
+                dropShadow: true, dropShadowColor: 0x000000, dropShadowBlur: 4, dropShadowDistance: 2
+            });
+            this.sprintMeterText.x = 20;
+            this.sprintMeterText.y = 20;
+            this.uiLayer.addChild(this.sprintMeterText);
+        } else {
+            this.sprintMeterGraphics = null;
+            this.sprintMeterText = null;
+        }
     }
 
-    renderUI(state) {
+    renderUI(state, myRole) {
         if (!state) return;
 
         // Timer
@@ -612,11 +627,11 @@ export class GameRenderer {
             }
         }
 
-        // Egg count
-        if (this.eggCountText && state.pupil) {
-            this.eggCountText.text = `Eggs: ${state.pupil.eggs}/${state.pupil.maxEggs}`;
-            if (state.pupil.eggs === 0) this.eggCountText.style.fill = 0xff0000;
-            else if (state.pupil.eggs === 1) this.eggCountText.style.fill = 0xffaa00;
+        // Egg count (from shared pool)
+        if (this.eggCountText && state.eggPool) {
+            this.eggCountText.text = `Eggs: ${state.eggPool.eggs}/${state.eggPool.maxEggs}`;
+            if (state.eggPool.eggs === 0) this.eggCountText.style.fill = 0xff0000;
+            else if (state.eggPool.eggs === 1) this.eggCountText.style.fill = 0xffaa00;
             else this.eggCountText.style.fill = 0xffffff;
         }
 
@@ -627,39 +642,41 @@ export class GameRenderer {
             this.musicHintText.style.fill = muted ? 0x999999 : 0xffffff;
         }
 
-        // Sprint meter
-        if (this.sprintMeterGraphics && state.teacher) {
-            const meterX = 20, meterY = 55, meterW = 150, meterH = 20;
-            this.sprintMeterGraphics.clear();
-            this.sprintMeterGraphics.beginFill(0x000000, 0.5);
-            this.sprintMeterGraphics.drawRect(meterX, meterY, meterW, meterH);
-            this.sprintMeterGraphics.endFill();
-            this.sprintMeterGraphics.lineStyle(2, 0xffffff, 1);
-            this.sprintMeterGraphics.drawRect(meterX, meterY, meterW, meterH);
+        // Sprint meter (for local teacher)
+        if (this.sprintMeterGraphics && state.teachers) {
+            const mySlot = roleIndex(myRole);
+            const myTeacher = state.teachers.find(t => t.slot === mySlot);
+            if (myTeacher) {
+                const meterX = 20, meterY = 55, meterW = 150, meterH = 20;
+                this.sprintMeterGraphics.clear();
+                this.sprintMeterGraphics.beginFill(0x000000, 0.5);
+                this.sprintMeterGraphics.drawRect(meterX, meterY, meterW, meterH);
+                this.sprintMeterGraphics.endFill();
+                this.sprintMeterGraphics.lineStyle(2, 0xffffff, 1);
+                this.sprintMeterGraphics.drawRect(meterX, meterY, meterW, meterH);
 
-            const t = state.teacher;
-            if (t.sprint) {
-                const fill = meterW * (t.sprintT / CONFIG.TEACHER.SPRINT_DURATION);
-                this.sprintMeterGraphics.beginFill(0x00ff00, 0.8);
-                this.sprintMeterGraphics.drawRect(meterX + 2, meterY + 2, Math.max(0, fill - 4), meterH - 4);
-                this.sprintMeterGraphics.endFill();
-            } else if (!t.sprintAvail) {
-                const cd = t.sprintCD / CONFIG.TEACHER.SPRINT_COOLDOWN;
-                const fill = meterW * (1 - cd);
-                this.sprintMeterGraphics.beginFill(0xff0000, 0.8);
-                this.sprintMeterGraphics.drawRect(meterX + 2, meterY + 2, Math.max(0, fill - 4), meterH - 4);
-                this.sprintMeterGraphics.endFill();
-            } else {
-                this.sprintMeterGraphics.beginFill(0xffff00, 0.8);
-                this.sprintMeterGraphics.drawRect(meterX + 2, meterY + 2, meterW - 4, meterH - 4);
-                this.sprintMeterGraphics.endFill();
+                const t = myTeacher;
+                if (t.sprint) {
+                    const fill = meterW * (t.sprintT / CONFIG.TEACHER.SPRINT_DURATION);
+                    this.sprintMeterGraphics.beginFill(0x00ff00, 0.8);
+                    this.sprintMeterGraphics.drawRect(meterX + 2, meterY + 2, Math.max(0, fill - 4), meterH - 4);
+                    this.sprintMeterGraphics.endFill();
+                } else if (!t.sprintAvail) {
+                    const cd = t.sprintCD / CONFIG.TEACHER.SPRINT_COOLDOWN;
+                    const fill = meterW * (1 - cd);
+                    this.sprintMeterGraphics.beginFill(0xff0000, 0.8);
+                    this.sprintMeterGraphics.drawRect(meterX + 2, meterY + 2, Math.max(0, fill - 4), meterH - 4);
+                    this.sprintMeterGraphics.endFill();
+                } else {
+                    this.sprintMeterGraphics.beginFill(0xffff00, 0.8);
+                    this.sprintMeterGraphics.drawRect(meterX + 2, meterY + 2, meterW - 4, meterH - 4);
+                    this.sprintMeterGraphics.endFill();
+                }
             }
         }
     }
 
     // --- Lobby / status screens ---
-    // lobbyState: { myId, myRole, teacherTaken, pupilTaken, teacherId, pupilId, canStart }
-    // callbacks: { onSelectRole(role), onStart() }
     showLobby(lobbyState, callbacks) {
         this.uiLayer.removeChildren();
         this.app.stage.eventMode = 'static';
@@ -673,42 +690,79 @@ export class GameRenderer {
             dropShadow: true, dropShadowColor: 0x000000, dropShadowBlur: 8, dropShadowDistance: 4
         });
         title.anchor.set(0.5);
-        title.x = cx; title.y = 80;
+        title.x = cx; title.y = 70;
         this.uiLayer.addChild(title);
 
         // Subtitle
-        const subtitle = new PIXI.Text('Choose your role', {
-            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 28, fill: 0xcccccc,
+        const subtitle = new PIXI.Text('Choose your role (2-4 players)', {
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 24, fill: 0xcccccc,
             stroke: 0x000000, strokeThickness: 3
         });
         subtitle.anchor.set(0.5);
-        subtitle.x = cx; subtitle.y = 150;
+        subtitle.x = cx; subtitle.y = 130;
         this.uiLayer.addChild(subtitle);
 
-        // Role cards
-        const cardW = 240, cardH = 220, cardGap = 60;
-        const cardsY = 220;
-        const teacherX = cx - cardW - cardGap / 2;
-        const pupilX = cx + cardGap / 2;
+        // Team labels
+        const teacherLabel = new PIXI.Text('TEACHERS', {
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 22, fill: 0x3498db,
+            fontWeight: 'bold', stroke: 0x000000, strokeThickness: 3
+        });
+        teacherLabel.anchor.set(0.5);
+        teacherLabel.x = cx - 155; teacherLabel.y = 165;
+        this.uiLayer.addChild(teacherLabel);
 
+        const pupilLabel = new PIXI.Text('PUPILS', {
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 22, fill: 0xe74c3c,
+            fontWeight: 'bold', stroke: 0x000000, strokeThickness: 3
+        });
+        pupilLabel.anchor.set(0.5);
+        pupilLabel.x = cx + 155; pupilLabel.y = 165;
+        this.uiLayer.addChild(pupilLabel);
+
+        // Role cards — 2x2 grid
+        const cardW = 200, cardH = 160, cardGap = 20, colGap = 60;
+        const leftCol = cx - cardW - colGap / 2;
+        const rightCol = cx + colGap / 2;
+        const row1Y = 190;
+        const row2Y = row1Y + cardH + cardGap;
+
+        // Teacher 1
         this._createRoleCard(
-            teacherX, cardsY, cardW, cardH,
-            'TEACHER', 'WASD + Shift\nDodge the eggs!\nReach the school!',
+            leftCol, row1Y, cardW, cardH,
+            'TEACHER 1', 'WASD + Shift\nDodge eggs!\nReach school!',
             0x3498db, 0x1a6da8,
-            lobbyState, 'teacher', callbacks
+            lobbyState, 'teacher1', callbacks
         );
 
+        // Teacher 2
         this._createRoleCard(
-            pupilX, cardsY, cardW, cardH,
-            'PUPIL', 'Mouse + Click\nThrow eggs!\nStop the teacher!',
-            0xe74c3c, 0xb33a2e,
-            lobbyState, 'pupil', callbacks
+            leftCol, row2Y, cardW, cardH,
+            'TEACHER 2', 'WASD + Shift\nDodge eggs!\nReach school!',
+            0x3498db, 0x1a6da8,
+            lobbyState, 'teacher2', callbacks
         );
 
-        // Start button (only when both roles taken)
+        // Pupil 1
+        this._createRoleCard(
+            rightCol, row1Y, cardW, cardH,
+            'PUPIL 1', 'Mouse + Click\nThrow eggs!\nStop teachers!',
+            0xe74c3c, 0xb33a2e,
+            lobbyState, 'pupil1', callbacks
+        );
+
+        // Pupil 2
+        this._createRoleCard(
+            rightCol, row2Y, cardW, cardH,
+            'PUPIL 2', 'Mouse + Click\nThrow eggs!\nStop teachers!',
+            0xe74c3c, 0xb33a2e,
+            lobbyState, 'pupil2', callbacks
+        );
+
+        // Start button (when at least 1 teacher + 1 pupil)
+        const startY = row2Y + cardH + 30;
         if (lobbyState.canStart) {
-            const btnW = 260, btnH = 60;
-            const btnX = cx - btnW / 2, btnY = 480;
+            const btnW = 260, btnH = 50;
+            const btnX = cx - btnW / 2;
 
             const startBtn = new PIXI.Container();
             const btnBg = new PIXI.Graphics();
@@ -720,14 +774,14 @@ export class GameRenderer {
             startBtn.addChild(btnBg);
 
             const btnText = new PIXI.Text('START GAME', {
-                fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 32, fill: 0xffffff,
+                fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 28, fill: 0xffffff,
                 fontWeight: 'bold', stroke: 0x000000, strokeThickness: 3
             });
             btnText.anchor.set(0.5);
             btnText.x = btnW / 2; btnText.y = btnH / 2;
             startBtn.addChild(btnText);
 
-            startBtn.x = btnX; startBtn.y = btnY;
+            startBtn.x = btnX; startBtn.y = startY;
             startBtn.eventMode = 'static';
             startBtn.cursor = 'pointer';
             startBtn.on('pointerdown', () => callbacks?.onStart?.());
@@ -736,64 +790,60 @@ export class GameRenderer {
 
             this.uiLayer.addChild(startBtn);
         } else {
-            const waitText = new PIXI.Text('Waiting for both players to pick a role...', {
-                fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 22, fill: 0xcccccc,
+            const waitText = new PIXI.Text('Need at least 1 teacher and 1 pupil to start...', {
+                fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 20, fill: 0xcccccc,
                 stroke: 0x000000, strokeThickness: 2
             });
             waitText.anchor.set(0.5);
-            waitText.x = cx; waitText.y = 500;
+            waitText.x = cx; waitText.y = startY + 20;
             this.uiLayer.addChild(waitText);
         }
 
         // Room code
         const urlParams = new URLSearchParams(window.location.search);
         const roomId = urlParams.get('room') || 'default';
-        const roomText = new PIXI.Text(`Room: ${roomId}  |  Share this URL to invite a friend!`, {
-            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 18, fill: 0xcccccc,
+        const roomText = new PIXI.Text(`Room: ${roomId}  |  Share this URL to invite friends!`, {
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 16, fill: 0xcccccc,
             stroke: 0x000000, strokeThickness: 2
         });
         roomText.anchor.set(0.5);
-        roomText.x = cx; roomText.y = 580;
+        roomText.x = cx; roomText.y = startY + 65;
         this.uiLayer.addChild(roomText);
 
         // Player count
         const countText = new PIXI.Text(`Players in room: ${lobbyState.playerCount || 1}`, {
-            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 18, fill: 0xcccccc,
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 16, fill: 0xcccccc,
             stroke: 0x000000, strokeThickness: 2
         });
         countText.anchor.set(0.5);
-        countText.x = cx; countText.y = 615;
+        countText.x = cx; countText.y = startY + 90;
         this.uiLayer.addChild(countText);
     }
 
     _createRoleCard(x, y, w, h, roleName, description, color, darkColor, lobbyState, role, callbacks) {
         const myId = lobbyState.myId;
-        const isTaken = role === 'teacher' ? lobbyState.teacherTaken : lobbyState.pupilTaken;
-        const takenById = role === 'teacher' ? lobbyState.teacherId : lobbyState.pupilId;
-        const isMe = takenById === myId;
-        const isAvailable = !isTaken;
-        const canClick = isAvailable || isMe; // Can click to select or deselect
+        const slotInfo = lobbyState[role]; // { taken, playerId }
+        const isTaken = slotInfo && slotInfo.taken;
+        const isMe = slotInfo && slotInfo.playerId === myId;
+        const canClick = !isTaken || isMe;
 
         const card = new PIXI.Container();
 
         // Card background
         const bg = new PIXI.Graphics();
         if (isMe) {
-            // Selected by me - bright border
             bg.beginFill(darkColor, 0.9);
             bg.drawRoundedRect(0, 0, w, h, 12);
             bg.endFill();
             bg.lineStyle(4, color);
             bg.drawRoundedRect(0, 0, w, h, 12);
         } else if (isTaken) {
-            // Taken by other - grayed out
             bg.beginFill(0x333333, 0.7);
             bg.drawRoundedRect(0, 0, w, h, 12);
             bg.endFill();
             bg.lineStyle(2, 0x555555);
             bg.drawRoundedRect(0, 0, w, h, 12);
         } else {
-            // Available
             bg.beginFill(0x222222, 0.8);
             bg.drawRoundedRect(0, 0, w, h, 12);
             bg.endFill();
@@ -804,23 +854,23 @@ export class GameRenderer {
 
         // Role name
         const nameText = new PIXI.Text(roleName, {
-            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 36,
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 26,
             fill: isMe ? 0xffffff : (isTaken ? 0x666666 : color),
-            fontWeight: 'bold', stroke: 0x000000, strokeThickness: 4
+            fontWeight: 'bold', stroke: 0x000000, strokeThickness: 3
         });
         nameText.anchor.set(0.5, 0);
-        nameText.x = w / 2; nameText.y = 20;
+        nameText.x = w / 2; nameText.y = 12;
         card.addChild(nameText);
 
         // Description
         const descText = new PIXI.Text(description, {
-            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 16,
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 14,
             fill: isTaken && !isMe ? 0x555555 : 0xcccccc,
             align: 'center', stroke: 0x000000, strokeThickness: 2,
-            lineHeight: 22
+            lineHeight: 20
         });
         descText.anchor.set(0.5, 0);
-        descText.x = w / 2; descText.y = 70;
+        descText.x = w / 2; descText.y = 50;
         card.addChild(descText);
 
         // Status line
@@ -837,12 +887,12 @@ export class GameRenderer {
         }
 
         const statusText = new PIXI.Text(statusStr, {
-            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 18,
+            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 16,
             fill: statusColor, fontWeight: 'bold',
             stroke: 0x000000, strokeThickness: 2
         });
         statusText.anchor.set(0.5);
-        statusText.x = w / 2; statusText.y = h - 30;
+        statusText.x = w / 2; statusText.y = h - 25;
         card.addChild(statusText);
 
         card.x = x; card.y = y;
@@ -883,8 +933,8 @@ export class GameRenderer {
         this.musicHintText = null;
 
         const winnerText = winner === WINNER.TEACHER
-            ? 'TEACHER WINS!\nReached the school!'
-            : 'PUPIL WINS!\nTime ran out!';
+            ? 'TEACHERS WIN!\nReached the school!'
+            : 'PUPILS WIN!\nTime ran out!';
         const winnerColor = winner === WINNER.TEACHER ? 0x3498db : 0xffd700;
 
         const text = new PIXI.Text(winnerText + '\n\nPress SPACE to return to lobby', {
@@ -913,27 +963,39 @@ export class GameRenderer {
     }
 
     // --- Full game setup/teardown ---
-    setupGame() {
+    setupGame(myRole, teacherCount = 1, pupilCount = 1) {
         // Clear previous game objects
         this.gameLayer.removeChildren();
         this.effectsLayer.removeChildren();
         this.projectileSprites.clear();
+        this.teacherSprites.clear();
+        this.teacherAnims.clear();
+        this.crosshairSprites.clear();
+        this.trajectoryGraphicsMap.clear();
+        this.pupilSprites.clear();
+        this.pupilAnims.clear();
         this.splats = [];
         this.screenShake = null;
 
-        this.createTeacher();
-        this.createPupil();
-        this.createGameUI();
+        for (let i = 0; i < teacherCount; i++) {
+            this.createTeacher(i);
+        }
+        for (let i = 0; i < pupilCount; i++) {
+            this.createPupil(i);
+        }
+        this.createGameUI(myRole);
     }
 
     cleanupGame() {
         this.gameLayer.removeChildren();
         this.effectsLayer.removeChildren();
         this.projectileSprites.clear();
+        this.teacherSprites.clear();
+        this.teacherAnims.clear();
+        this.crosshairSprites.clear();
+        this.trajectoryGraphicsMap.clear();
+        this.pupilSprites.clear();
+        this.pupilAnims.clear();
         this.splats = [];
-        this.teacherSprite = null;
-        this.pupilSprite = null;
-        this.crosshairSprite = null;
-        this.trajectoryGraphics = null;
     }
 }

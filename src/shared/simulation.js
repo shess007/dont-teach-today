@@ -2,7 +2,7 @@
 
 import { CONFIG, GAME_STATE, WINNER } from './config.js';
 import { TeacherSimulation } from './teacher-sim.js';
-import { PupilSimulation } from './pupil-sim.js';
+import { PupilSimulation, SharedEggPool } from './pupil-sim.js';
 import { ProjectileSimulation } from './projectile-sim.js';
 import { CollisionManager } from './collision.js';
 import levelData from './level.json';
@@ -22,14 +22,18 @@ function createObstacleLayout() {
     });
 }
 
+const DEFAULT_TEACHER_INPUT = { up: false, down: false, left: false, right: false, sprint: false };
+const DEFAULT_PUPIL_INPUT = { mouseX: 0, mouseY: 0, click: false };
+
 export class GameSimulation {
     constructor() {
         this.state = GAME_STATE.LOBBY;
         this.winner = WINNER.NONE;
         this.timeRemaining = CONFIG.GAME.MATCH_DURATION;
 
-        this.teacher = null;
-        this.pupil = null;
+        this.teachers = [];
+        this.pupils = [];
+        this.eggPool = null;
         this.projectiles = [];
         this.obstacles = createObstacleLayout();
         this.collisionManager = new CollisionManager();
@@ -40,18 +44,28 @@ export class GameSimulation {
         this.events = [];
     }
 
-    startGame() {
+    startGame(teacherCount = 1, pupilCount = 1) {
         this.state = GAME_STATE.PLAYING;
         this.winner = WINNER.NONE;
         this.timeRemaining = CONFIG.GAME.MATCH_DURATION;
-        this.teacher = new TeacherSimulation();
-        this.pupil = new PupilSimulation();
+
+        this.teachers = [];
+        for (let i = 0; i < teacherCount; i++) {
+            this.teachers.push(new TeacherSimulation(i));
+        }
+
+        this.eggPool = new SharedEggPool();
+        this.pupils = [];
+        for (let i = 0; i < pupilCount; i++) {
+            this.pupils.push(new PupilSimulation(i, this.eggPool));
+        }
+
         this.projectiles = [];
         this.tick = 0;
         this.events = [];
     }
 
-    update(deltaTime, teacherInputs, pupilInputs) {
+    update(deltaTime, teacherInputsMap, pupilInputsMap) {
         if (this.state !== GAME_STATE.PLAYING) return;
 
         this.tick++;
@@ -64,18 +78,25 @@ export class GameSimulation {
             return;
         }
 
-        // Update teacher
-        if (this.teacher) {
-            this.teacher.update(deltaTime, teacherInputs, this.obstacles);
-            if (this.teacher.hasReachedGoal()) {
-                this.endGame(WINNER.TEACHER);
-                return;
-            }
+        // Update teachers
+        for (const teacher of this.teachers) {
+            const input = teacherInputsMap[teacher.slotIndex] || DEFAULT_TEACHER_INPUT;
+            teacher.update(deltaTime, input, this.obstacles);
         }
 
-        // Update pupil
-        if (this.pupil) {
-            const newProjectile = this.pupil.update(deltaTime, pupilInputs, this.obstacles);
+        // Win check: ALL teachers must have reached goal
+        if (this.teachers.length > 0 && this.teachers.every(t => t.hasReachedGoal())) {
+            this.endGame(WINNER.TEACHER);
+            return;
+        }
+
+        // Update egg pool
+        this.eggPool.update(deltaTime);
+
+        // Update pupils
+        for (const pupil of this.pupils) {
+            const input = pupilInputsMap[pupil.slotIndex] || DEFAULT_PUPIL_INPUT;
+            const newProjectile = pupil.update(deltaTime, input, this.obstacles);
             if (newProjectile) {
                 const proj = new ProjectileSimulation(
                     newProjectile.startX, newProjectile.startY,
@@ -86,8 +107,8 @@ export class GameSimulation {
             }
 
             // Return to idle after throw animation frame
-            if (this.pupil.currentAnimation === 'throw' && this.pupil.throwCooldown < CONFIG.PUPIL.EGG_COOLDOWN - 0.3) {
-                this.pupil.currentAnimation = 'idle';
+            if (pupil.currentAnimation === 'throw' && pupil.throwCooldown < CONFIG.PUPIL.EGG_COOLDOWN - 0.3) {
+                pupil.currentAnimation = 'idle';
             }
         }
 
@@ -112,28 +133,28 @@ export class GameSimulation {
     }
 
     checkCollisions() {
-        if (!this.teacher) return;
+        if (this.teachers.length === 0) return;
 
         const hits = this.collisionManager.checkAllProjectileCollisions(
-            this.projectiles, this.teacher
+            this.projectiles, this.teachers
         );
 
-        for (const egg of hits) {
-            this.handleEggHit(egg);
+        for (const { projectile, teacher } of hits) {
+            this.handleEggHit(projectile, teacher);
         }
     }
 
-    handleEggHit(egg) {
+    handleEggHit(egg, teacher) {
         const hitX = Math.round(egg.x);
         const hitY = Math.round(egg.y);
 
-        this.events.push({ type: 'hit', x: hitX, y: hitY, eggId: egg.id });
+        this.events.push({ type: 'hit', x: hitX, y: hitY, eggId: egg.id, teacherSlot: teacher.slotIndex });
 
-        this.teacher.respawn();
+        teacher.respawn();
 
-        // Pupil celebrates
-        if (this.pupil) {
-            this.pupil.currentAnimation = 'celebrate';
+        // Pupils celebrate
+        for (const pupil of this.pupils) {
+            pupil.currentAnimation = 'celebrate';
         }
 
         const index = this.projectiles.indexOf(egg);
@@ -145,8 +166,10 @@ export class GameSimulation {
     endGame(winner) {
         this.state = GAME_STATE.GAME_OVER;
         this.winner = winner;
-        if (winner === WINNER.PUPIL && this.pupil) {
-            this.pupil.currentAnimation = 'celebrate';
+        if (winner === WINNER.PUPIL) {
+            for (const pupil of this.pupils) {
+                pupil.currentAnimation = 'celebrate';
+            }
         }
         this.events.push({ type: 'gameover', winner });
     }
@@ -158,8 +181,9 @@ export class GameSimulation {
             gameState: this.state,
             winner: this.winner,
             time: Math.round(this.timeRemaining * 10) / 10,
-            teacher: this.teacher ? this.teacher.serialize() : null,
-            pupil: this.pupil ? this.pupil.serialize() : null,
+            teachers: this.teachers.map(t => t.serialize()),
+            pupils: this.pupils.map(p => p.serialize()),
+            eggPool: this.eggPool ? this.eggPool.serialize() : null,
             projectiles: this.projectiles.map(p => p.serialize()),
             events: this.events
         };

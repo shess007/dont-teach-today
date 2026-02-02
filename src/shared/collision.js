@@ -14,12 +14,15 @@ export class CollisionManager {
         );
     }
 
-    checkAllProjectileCollisions(projectiles, teacher) {
+    checkAllProjectileCollisions(projectiles, teachers) {
         const hits = [];
         for (const projectile of projectiles) {
-            // Check both in-flight and just-landed eggs (hasLanded means it reached target this tick)
-            if ((projectile.isActive || projectile.hasLanded) && this.checkEggTeacherCollision(projectile, teacher)) {
-                hits.push(projectile);
+            if (!projectile.isActive && !projectile.hasLanded) continue;
+            for (const teacher of teachers) {
+                if (this.checkEggTeacherCollision(projectile, teacher)) {
+                    hits.push({ projectile, teacher });
+                    break; // each egg can only hit one teacher
+                }
             }
         }
         return hits;

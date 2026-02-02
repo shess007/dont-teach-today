@@ -55,7 +55,7 @@ export class NetworkManager {
                 this.callbacks.onCountdown?.(data.count);
                 break;
             case "start":
-                this.callbacks.onStart?.();
+                this.callbacks.onStart?.(data);
                 break;
             case "state":
                 this.callbacks.onState?.(data);

@@ -3,16 +3,62 @@
 import { CONFIG } from './config.js';
 import { Utils } from './utils.js';
 
-export class PupilSimulation {
+export class SharedEggPool {
     constructor() {
         this.eggCount = CONFIG.PUPIL.STARTING_EGGS;
         this.maxEggs = CONFIG.PUPIL.MAX_EGGS;
+        this.isRefilling = false;
+        this.refillTimer = 0;
+    }
+
+    update(deltaTime) {
+        if (this.isRefilling) {
+            this.refillTimer -= deltaTime;
+            if (this.refillTimer <= 0) {
+                this.completeRefill();
+            }
+        }
+    }
+
+    tryConsume() {
+        if (this.eggCount <= 0) return false;
+        this.eggCount--;
+        return true;
+    }
+
+    startRefill() {
+        if (this.eggCount >= this.maxEggs || this.isRefilling) return;
+        this.isRefilling = true;
+        this.refillTimer = CONFIG.PUPIL.REFILL_DELAY;
+    }
+
+    completeRefill() {
+        this.isRefilling = false;
+        this.refillTimer = 0;
+        this.eggCount = Math.min(this.maxEggs, this.eggCount + CONFIG.PUPIL.REFILL_AMOUNT);
+    }
+
+    serialize() {
+        return {
+            eggs: this.eggCount,
+            maxEggs: this.maxEggs,
+            refilling: this.isRefilling,
+            refillT: Math.round(this.refillTimer * 100) / 100,
+        };
+    }
+}
+
+export class PupilSimulation {
+    constructor(slotIndex = 0, eggPool) {
+        this.slotIndex = slotIndex;
+        this.eggPool = eggPool;
 
         this.throwCooldown = 0;
         this.canThrow = true;
 
-        this.isRefilling = false;
-        this.refillTimer = 0;
+        const throwPos = CONFIG.PUPIL.THROW_POSITIONS[slotIndex] || { x: CONFIG.SCREEN.WIDTH - 40, y: CONFIG.SCREEN.HEIGHT - 40 };
+        this.throwX = throwPos.x;
+        this.throwY = throwPos.y;
 
         this.crosshairX = CONFIG.SCREEN.WIDTH / 2;
         this.crosshairY = CONFIG.SCREEN.HEIGHT / 2;
@@ -33,14 +79,6 @@ export class PupilSimulation {
             }
         }
 
-        // Update refill timer
-        if (this.isRefilling) {
-            this.refillTimer -= deltaTime;
-            if (this.refillTimer <= 0) {
-                this.completeRefill();
-            }
-        }
-
         // Find chicken coop
         const chickenCoop = obstacles.find(obs => obs.type === 'CHICKEN_COOP');
 
@@ -53,7 +91,7 @@ export class PupilSimulation {
         if (inputs.click) {
             // Check if clicking on chicken coop
             if (chickenCoop && this.isOverChickenCoop(chickenCoop)) {
-                this.startRefill();
+                this.eggPool.startRefill();
                 return null;
             }
             // Try to throw egg
@@ -71,46 +109,26 @@ export class PupilSimulation {
     }
 
     tryThrowEgg() {
-        if (!this.canThrow || this.eggCount <= 0) return null;
+        if (!this.canThrow || !this.eggPool.tryConsume()) return null;
 
-        const startX = CONFIG.SCREEN.WIDTH - 40;
-        const startY = CONFIG.SCREEN.HEIGHT - 40;
-        const targetX = this.crosshairX;
-        const targetY = this.crosshairY;
-
-        this.eggCount--;
         this.canThrow = false;
         this.throwCooldown = CONFIG.PUPIL.EGG_COOLDOWN;
         this.currentAnimation = 'throw';
 
         // Return projectile descriptor (server will create the ProjectileSimulation)
-        return { startX, startY, targetX, targetY };
-    }
-
-    startRefill() {
-        if (this.eggCount >= this.maxEggs || this.isRefilling) return;
-        this.isRefilling = true;
-        this.refillTimer = CONFIG.PUPIL.REFILL_DELAY;
-    }
-
-    completeRefill() {
-        this.isRefilling = false;
-        this.refillTimer = 0;
-        const eggsToAdd = CONFIG.PUPIL.REFILL_AMOUNT;
-        this.eggCount = Math.min(this.maxEggs, this.eggCount + eggsToAdd);
+        return { startX: this.throwX, startY: this.throwY, targetX: this.crosshairX, targetY: this.crosshairY };
     }
 
     serialize() {
         return {
-            eggs: this.eggCount,
-            maxEggs: this.maxEggs,
+            slot: this.slotIndex,
             cooldown: Math.round(this.throwCooldown * 100) / 100,
             canThrow: this.canThrow,
-            refilling: this.isRefilling,
-            refillT: Math.round(this.refillTimer * 100) / 100,
             crossX: Math.round(this.crosshairX),
             crossY: Math.round(this.crosshairY),
-            anim: this.currentAnimation
+            anim: this.currentAnimation,
+            throwX: this.throwX,
+            throwY: this.throwY,
         };
     }
 }
