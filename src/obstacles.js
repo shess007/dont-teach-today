@@ -261,7 +261,7 @@ class Obstacle {
  * Create obstacles for the schoolyard
  * Returns array of Obstacle objects
  */
-function createObstacles(container) {
+async function createObstacles(container) {
     const obstacles = [];
 
     // Screen dimensions
@@ -290,57 +290,21 @@ function createObstacles(container) {
         return true;
     };
 
-    // Add chicken coop (top-right corner)
-    const coopY = 20;
-    const coopX = width - 200 - CONFIG.OBSTACLES.CHICKEN_COOP.WIDTH;
-    obstacles.push(new Obstacle('CHICKEN_COOP', coopX, coopY, container));
-
-    // Add bushes (garden clusters and hiding spots along paths)
-    const bushPositions = [
-        { x: 450, y: 300 },
-        { x: 620, y: 200 },
-        { x: 700, y: 530 },
-        { x: 380, y: 520 },
-        { x: 900, y: 220 }
-    ];
-
-    for (const pos of bushPositions) {
-        if (isValidPosition(pos.x, pos.y, 60, 60)) {
-            obstacles.push(new Obstacle('BUSH', pos.x, pos.y, container));
-        }
+    // Load obstacle positions from level.json (embedded at build time or fetched)
+    let levelData;
+    try {
+        const response = await fetch('src/shared/level.json');
+        levelData = await response.json();
+    } catch (e) {
+        console.warn('Failed to load level.json, using empty layout');
+        levelData = { obstacles: [] };
     }
 
-    // Add benches (seating areas along paths)
-    const benchPositions = [
-        { x: 330, y: 200 },
-        { x: 600, y: 460 },
-        { x: 880, y: 400 }
-    ];
-
-    for (const pos of benchPositions) {
-        if (isValidPosition(pos.x, pos.y, 80, 40)) {
-            obstacles.push(new Obstacle('BENCH', pos.x, pos.y, container));
+    for (const entry of levelData.obstacles) {
+        const cfg = CONFIG.OBSTACLES[entry.type];
+        if (cfg && isValidPosition(entry.x, entry.y, cfg.WIDTH, cfg.HEIGHT)) {
+            obstacles.push(new Obstacle(entry.type, entry.x, entry.y, container));
         }
-    }
-
-    // Add trees (perimeter avenue trees + center chokepoint)
-    const treePositions = [
-        { x: 270, y: 60 },
-        { x: 550, y: 55 },
-        { x: 950, y: 60 },
-        { x: 270, y: 640 },
-        { x: 780, y: 350 }
-    ];
-
-    for (const pos of treePositions) {
-        if (isValidPosition(pos.x, pos.y, 50, 80)) {
-            obstacles.push(new Obstacle('TREE', pos.x, pos.y, container));
-        }
-    }
-
-    // Add swing set (playground area, bottom-center-right)
-    if (isValidPosition(730, 580, 100, 120)) {
-        obstacles.push(new Obstacle('SWING_SET', 730, 580, container));
     }
 
     Utils.log(`Created ${obstacles.length} obstacles`);

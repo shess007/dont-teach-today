@@ -5,93 +5,21 @@ import { TeacherSimulation } from './teacher-sim.js';
 import { PupilSimulation } from './pupil-sim.js';
 import { ProjectileSimulation } from './projectile-sim.js';
 import { CollisionManager } from './collision.js';
+import levelData from './level.json';
 
-// Deterministic obstacle layout (same for all games)
+// Build obstacle layout from level.json
 function createObstacleLayout() {
-    const obstacles = [];
-    const width = CONFIG.SCREEN.WIDTH;
-    const height = CONFIG.SCREEN.HEIGHT;
-
-    const isValidPosition = (x, y, w, h) => {
-        if (x < 200 || x + w > width - 200) return false;
-        if (y < 50 || y + h > height - 50) return false;
-        for (const obs of obstacles) {
-            if (!(x + w < obs.x || x > obs.x + obs.width ||
-                  y + h < obs.y || y > obs.y + obs.height)) {
-                return false;
-            }
-        }
-        return true;
-    };
-
-    // Chicken coop (top-right corner)
-    const coopX = width - 200 - CONFIG.OBSTACLES.CHICKEN_COOP.WIDTH;
-    const coopY = 20;
-    obstacles.push({
-        type: 'CHICKEN_COOP', x: coopX, y: coopY,
-        width: CONFIG.OBSTACLES.CHICKEN_COOP.WIDTH,
-        height: CONFIG.OBSTACLES.CHICKEN_COOP.HEIGHT,
-        canHide: false
+    return levelData.obstacles.map(entry => {
+        const cfg = CONFIG.OBSTACLES[entry.type];
+        return {
+            type: entry.type,
+            x: entry.x,
+            y: entry.y,
+            width: cfg.WIDTH,
+            height: cfg.HEIGHT,
+            canHide: cfg.CAN_HIDE || false
+        };
     });
-
-    // Bushes (garden clusters and hiding spots along paths)
-    const bushPositions = [
-        { x: 450, y: 300 }, { x: 620, y: 200 }, { x: 700, y: 530 },
-        { x: 380, y: 520 }, { x: 900, y: 220 }
-    ];
-    for (const pos of bushPositions) {
-        if (isValidPosition(pos.x, pos.y, CONFIG.OBSTACLES.BUSH.WIDTH, CONFIG.OBSTACLES.BUSH.HEIGHT)) {
-            obstacles.push({
-                type: 'BUSH', x: pos.x, y: pos.y,
-                width: CONFIG.OBSTACLES.BUSH.WIDTH,
-                height: CONFIG.OBSTACLES.BUSH.HEIGHT,
-                canHide: CONFIG.OBSTACLES.BUSH.CAN_HIDE
-            });
-        }
-    }
-
-    // Benches (seating areas along paths)
-    const benchPositions = [
-        { x: 330, y: 200 }, { x: 600, y: 460 }, { x: 880, y: 400 }
-    ];
-    for (const pos of benchPositions) {
-        if (isValidPosition(pos.x, pos.y, CONFIG.OBSTACLES.BENCH.WIDTH, CONFIG.OBSTACLES.BENCH.HEIGHT)) {
-            obstacles.push({
-                type: 'BENCH', x: pos.x, y: pos.y,
-                width: CONFIG.OBSTACLES.BENCH.WIDTH,
-                height: CONFIG.OBSTACLES.BENCH.HEIGHT,
-                canHide: false
-            });
-        }
-    }
-
-    // Trees (perimeter avenue trees + center chokepoint)
-    const treePositions = [
-        { x: 270, y: 60 }, { x: 550, y: 55 }, { x: 950, y: 60 },
-        { x: 270, y: 640 }, { x: 780, y: 350 }
-    ];
-    for (const pos of treePositions) {
-        if (isValidPosition(pos.x, pos.y, CONFIG.OBSTACLES.TREE.WIDTH, CONFIG.OBSTACLES.TREE.HEIGHT)) {
-            obstacles.push({
-                type: 'TREE', x: pos.x, y: pos.y,
-                width: CONFIG.OBSTACLES.TREE.WIDTH,
-                height: CONFIG.OBSTACLES.TREE.HEIGHT,
-                canHide: false
-            });
-        }
-    }
-
-    // Swing set (playground area, bottom-center-right)
-    if (isValidPosition(730, 580, CONFIG.OBSTACLES.SWING_SET.WIDTH, CONFIG.OBSTACLES.SWING_SET.HEIGHT)) {
-        obstacles.push({
-            type: 'SWING_SET', x: 730, y: 580,
-            width: CONFIG.OBSTACLES.SWING_SET.WIDTH,
-            height: CONFIG.OBSTACLES.SWING_SET.HEIGHT,
-            canHide: false
-        });
-    }
-
-    return obstacles;
 }
 
 export class GameSimulation {

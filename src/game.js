@@ -468,7 +468,7 @@ class Game {
     /**
      * Start the game
      */
-    startGame() {
+    async startGame() {
         Utils.log('Game starting...');
 
         // Initialize audio (requires user interaction)
@@ -495,7 +495,7 @@ class Game {
         this.splats = []; // Array to track egg splats
         this.screenShake = null;
         this.collisionManager = new CollisionManager();
-        this.obstacles = createObstacles(this.obstaclesLayer);
+        this.obstacles = await createObstacles(this.obstaclesLayer);
 
         // Create UI displays
         this.createTimerDisplay();

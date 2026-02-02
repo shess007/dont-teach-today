@@ -1,0 +1,19 @@
+{
+    "obstacles": [
+        { "type": "CHICKEN_COOP", "x": 1088, "y": 20 },
+        { "type": "BUSH", "x": 450, "y": 300 },
+        { "type": "BUSH", "x": 620, "y": 200 },
+        { "type": "BUSH", "x": 700, "y": 530 },
+        { "type": "BUSH", "x": 380, "y": 520 },
+        { "type": "BUSH", "x": 900, "y": 220 },
+        { "type": "BENCH", "x": 330, "y": 200 },
+        { "type": "BENCH", "x": 600, "y": 460 },
+        { "type": "BENCH", "x": 880, "y": 400 },
+        { "type": "TREE", "x": 270, "y": 60 },
+        { "type": "TREE", "x": 550, "y": 55 },
+        { "type": "TREE", "x": 950, "y": 60 },
+        { "type": "TREE", "x": 270, "y": 640 },
+        { "type": "TREE", "x": 780, "y": 350 },
+        { "type": "SWING_SET", "x": 730, "y": 580 }
+    ]
+}

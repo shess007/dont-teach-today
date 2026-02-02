@@ -13,6 +13,7 @@ let TREE_TEXTURES = [];
 let BUSH_TEXTURE = null;
 let BENCH_TEXTURE = null;
 let COOP_TEXTURE = null;
+let SCHOOL_TEXTURE = null;
 
 export class GameRenderer {
     constructor() {
@@ -102,6 +103,7 @@ export class GameRenderer {
             BUSH_TEXTURE = await PIXI.Assets.load('assets/models/bush1.png');
             BENCH_TEXTURE = await PIXI.Assets.load('assets/models/bench1.png');
             COOP_TEXTURE = await PIXI.Assets.load('assets/models/chicken-coop.png');
+            SCHOOL_TEXTURE = await PIXI.Assets.load('assets/models/school-building.png');
             await PIXI.Assets.load('assets/models/schoolyard-tile.png');
         } catch (e) { console.warn('Obstacle assets failed:', e); }
     }
@@ -141,54 +143,43 @@ export class GameRenderer {
     }
 
     drawSchool() {
-        const school = new PIXI.Graphics();
         const x = CONFIG.SCHOOL.X, y = CONFIG.SCHOOL.Y;
         const w = CONFIG.SCHOOL.WIDTH, h = CONFIG.SCHOOL.HEIGHT;
 
-        school.beginFill(CONFIG.SCHOOL.COLOR);
-        school.drawRect(x, y, w, h);
-        school.endFill();
+        if (SCHOOL_TEXTURE) {
+            const sprite = new PIXI.Sprite(SCHOOL_TEXTURE);
+            const scale = h / SCHOOL_TEXTURE.height;
+            sprite.width = SCHOOL_TEXTURE.width * scale;
+            sprite.height = h;
+            sprite.x = x + (w - sprite.width) / 2;
+            sprite.y = y;
+            this.obstaclesLayer.addChild(sprite);
+        } else {
+            // Fallback procedural school
+            const school = new PIXI.Graphics();
+            school.beginFill(CONFIG.SCHOOL.COLOR);
+            school.drawRect(x, y, w, h);
+            school.endFill();
 
-        school.beginFill(0x660000);
-        for (let py = y + 10; py < y + h; py += 20) {
-            for (let px = x + 10; px < x + w; px += 30) {
-                school.drawRect(px, py, 25, 8);
+            school.beginFill(0x660000);
+            for (let py = y + 10; py < y + h; py += 20) {
+                for (let px = x + 10; px < x + w; px += 30) {
+                    school.drawRect(px, py, 25, 8);
+                }
             }
+            school.endFill();
+
+            const text = new PIXI.Text('SCHOOL', {
+                fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 20,
+                fill: 0xffffff, align: 'center', fontWeight: 'bold',
+                stroke: 0x000000, strokeThickness: 3
+            });
+            text.anchor.set(0.5);
+            text.x = x + w / 2; text.y = y + 15;
+
+            this.obstaclesLayer.addChild(school);
+            this.obstaclesLayer.addChild(text);
         }
-        school.endFill();
-
-        const windowColor = 0x87CEEB;
-        school.beginFill(windowColor);
-        for (let row = 0; row < 3; row++) {
-            for (let col = 0; col < 3; col++) {
-                school.drawRect(x + 20 + col * 40, y + 40 + row * 60, 30, 40);
-            }
-        }
-        school.endFill();
-
-        school.beginFill(0x654321);
-        school.drawRect(x + 55, y + 220, 40, 70);
-        school.endFill();
-        school.beginFill(0xFFD700);
-        school.drawRect(x + 85, y + 255, 4, 4);
-        school.endFill();
-        school.beginFill(0x333333);
-        school.drawRect(x - 10, y - 20, w + 20, 25);
-        school.endFill();
-        school.beginFill(CONFIG.SCHOOL.COLOR);
-        school.drawRect(x + 110, y - 40, 20, 25);
-        school.endFill();
-
-        const text = new PIXI.Text('SCHOOL', {
-            fontFamily: CONFIG.UI.FONT_FAMILY, fontSize: 20,
-            fill: 0xffffff, align: 'center', fontWeight: 'bold',
-            stroke: 0x000000, strokeThickness: 3
-        });
-        text.anchor.set(0.5);
-        text.x = x + w / 2; text.y = y + 15;
-
-        this.obstaclesLayer.addChild(school);
-        this.obstaclesLayer.addChild(text);
     }
 
     // --- Obstacle rendering ---

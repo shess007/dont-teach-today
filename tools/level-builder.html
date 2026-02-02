@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Recess Revenge - Level Builder</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a1a1a; color: #eee; font-family: Arial, sans-serif; }
+    #header { padding: 10px 20px; background: #222; display: flex; align-items: center; gap: 20px; }
+    #header h1 { font-size: 20px; color: #ffff00; }
+    #header button { padding: 6px 16px; font-size: 14px; cursor: pointer; border: none; border-radius: 4px; }
+    #exportBtn { background: #27ae60; color: #fff; }
+    #downloadBtn { background: #8e44ad; color: #fff; }
+    #copyBtn { background: #3498db; color: #fff; }
+    #clearBtn { background: #c0392b; color: #fff; }
+    #main { display: flex; }
+    #palette { width: 140px; padding: 10px; background: #252525; display: flex; flex-direction: column; gap: 8px; }
+    #palette h3 { font-size: 14px; color: #aaa; margin-bottom: 4px; }
+    .palette-item {
+        padding: 8px; border-radius: 6px; cursor: pointer; text-align: center;
+        font-size: 13px; font-weight: bold; border: 2px solid transparent;
+        user-select: none;
+    }
+    .palette-item:hover { opacity: 0.85; }
+    .palette-item.selected { border-color: #fff; }
+    .palette-item.BUSH { background: #228B22; color: #fff; }
+    .palette-item.BENCH { background: #8B4513; color: #fff; }
+    .palette-item.TREE { background: #654321; color: #fff; }
+    .palette-item.SWING_SET { background: #C0C0C0; color: #000; }
+    .palette-item.CHICKEN_COOP { background: #DC143C; color: #fff; }
+    #gridToggle { margin-top: 10px; }
+    #gridToggle label { font-size: 13px; cursor: pointer; }
+    #canvasWrap { flex: 1; overflow: auto; padding: 10px; }
+    canvas { display: block; cursor: crosshair; }
+    #output { padding: 10px 20px; background: #222; }
+    #output textarea {
+        width: 100%; height: 160px; background: #111; color: #0f0; border: 1px solid #444;
+        font-family: monospace; font-size: 13px; padding: 8px; resize: vertical;
+    }
+    #info { padding: 6px 20px; background: #252525; font-size: 12px; color: #888; }
+    #coords { position: fixed; bottom: 10px; right: 20px; background: #000a; padding: 4px 10px; border-radius: 4px; font-size: 12px; color: #aaa; }
+</style>
+</head>
+<body>
+
+<div id="header">
+    <h1>RECESS REVENGE - Level Builder</h1>
+    <button id="exportBtn" onclick="exportCode()">Export JSON</button>
+    <button id="downloadBtn" onclick="downloadJson()">Download level.json</button>
+    <button id="copyBtn" onclick="copyCode()">Copy to Clipboard</button>
+    <button id="clearBtn" onclick="clearAll()">Clear All</button>
+</div>
+
+<div id="info">
+    Click palette item then click canvas to place. Drag to move. Right-click to delete. Export saves to src/shared/level.json format.
+</div>
+
+<div id="main">
+    <div id="palette">
+        <h3>OBSTACLES</h3>
+        <div class="palette-item BUSH" data-type="BUSH" onclick="selectType('BUSH')">Bush<br><small>60x60</small></div>
+        <div class="palette-item BENCH" data-type="BENCH" onclick="selectType('BENCH')">Bench<br><small>80x40</small></div>
+        <div class="palette-item TREE" data-type="TREE" onclick="selectType('TREE')">Tree<br><small>50x80</small></div>
+        <div class="palette-item SWING_SET" data-type="SWING_SET" onclick="selectType('SWING_SET')">Swing Set<br><small>100x120</small></div>
+        <div class="palette-item CHICKEN_COOP" data-type="CHICKEN_COOP" onclick="selectType('CHICKEN_COOP')">Chicken Coop<br><small>120x115</small></div>
+
+        <div id="gridToggle">
+            <label><input type="checkbox" id="gridCheck" checked onchange="render()"> Snap to grid (10px)</label>
+        </div>
+        <div style="margin-top:8px">
+            <label style="font-size:13px"><input type="checkbox" id="showZones" checked onchange="render()"> Show zones</label>
+        </div>
+    </div>
+
+    <div id="canvasWrap">
+        <canvas id="canvas"></canvas>
+    </div>
+</div>
+
+<div id="output">
+    <textarea id="codeOutput" readonly placeholder="Click 'Export JSON' to generate level.json content. Use 'Download level.json' to save directly to file."></textarea>
+</div>
+
+<div id="coords">x: 0, y: 0</div>
+
+<script>
+// --- Config (mirrors game config) ---
+const SCREEN = { WIDTH: 1408, HEIGHT: 792 };
+const SCHOOL = { WIDTH: 150, HEIGHT: 300, X: 1265, Y: 246 };
+const TEACHER = { SPAWN_X: 110, GOAL_X: 1298 };
+
+const OBSTACLE_TYPES = {
+    BUSH:         { width: 60,  height: 60,  color: '#228B22', label: 'Bush',    canHide: true },
+    BENCH:        { width: 80,  height: 40,  color: '#8B4513', label: 'Bench',   canHide: false },
+    TREE:         { width: 50,  height: 80,  color: '#654321', label: 'Tree',    canHide: false },
+    SWING_SET:    { width: 100, height: 120, color: '#C0C0C0', label: 'Swing',   canHide: false },
+    CHICKEN_COOP: { width: 120, height: 115, color: '#DC143C', label: 'Coop',    canHide: false },
+};
+
+// --- State ---
+let obstacles = [];
+let selectedType = null;
+let dragging = null;
+let dragOffsetX = 0, dragOffsetY = 0;
+let mouseX = 0, mouseY = 0;
+
+// --- Canvas setup ---
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = SCREEN.WIDTH;
+canvas.height = SCREEN.HEIGHT;
+
+// --- Pre-load current obstacles ---
+function loadDefaults() {
+    obstacles = [
+        // Chicken Coop
+        { type: 'CHICKEN_COOP', x: 1088, y: 20 },
+        // Bushes
+        { type: 'BUSH', x: 450, y: 300 },
+        { type: 'BUSH', x: 620, y: 200 },
+        { type: 'BUSH', x: 700, y: 530 },
+        { type: 'BUSH', x: 380, y: 520 },
+        { type: 'BUSH', x: 900, y: 220 },
+        // Benches
+        { type: 'BENCH', x: 330, y: 200 },
+        { type: 'BENCH', x: 600, y: 460 },
+        { type: 'BENCH', x: 880, y: 400 },
+        // Trees
+        { type: 'TREE', x: 270, y: 60 },
+        { type: 'TREE', x: 550, y: 55 },
+        { type: 'TREE', x: 950, y: 60 },
+        { type: 'TREE', x: 270, y: 640 },
+        { type: 'TREE', x: 780, y: 350 },
+        // Swing Set
+        { type: 'SWING_SET', x: 730, y: 580 },
+    ];
+}
+
+function snap(v) {
+    if (document.getElementById('gridCheck').checked) {
+        return Math.round(v / 10) * 10;
+    }
+    return Math.round(v);
+}
+
+// --- Rendering ---
+function render() {
+    ctx.clearRect(0, 0, SCREEN.WIDTH, SCREEN.HEIGHT);
+
+    // Background
+    ctx.fillStyle = '#3a3a3a';
+    ctx.fillRect(0, 0, SCREEN.WIDTH, SCREEN.HEIGHT);
+
+    // Grid
+    if (document.getElementById('gridCheck').checked) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < SCREEN.WIDTH; x += 50) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, SCREEN.HEIGHT); ctx.stroke();
+        }
+        for (let y = 0; y < SCREEN.HEIGHT; y += 50) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(SCREEN.WIDTH, y); ctx.stroke();
+        }
+    }
+
+    // Court lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(0, SCREEN.HEIGHT / 2); ctx.lineTo(SCREEN.WIDTH, SCREEN.HEIGHT / 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(SCREEN.WIDTH / 2, 0); ctx.lineTo(SCREEN.WIDTH / 2, SCREEN.HEIGHT); ctx.stroke();
+
+    // Yellow dashed lines (start/finish)
+    ctx.fillStyle = 'rgba(255,255,0,0.9)';
+    for (let y = 0; y < SCREEN.HEIGHT; y += 40) {
+        ctx.fillRect(TEACHER.SPAWN_X + 40, y, 5, 20);
+    }
+    for (let y = 0; y < SCREEN.HEIGHT; y += 40) {
+        ctx.fillRect(TEACHER.GOAL_X, y, 5, 20);
+    }
+
+    // Exclusion zones
+    if (document.getElementById('showZones').checked) {
+        ctx.fillStyle = 'rgba(255,0,0,0.08)';
+        ctx.fillRect(0, 0, 200, SCREEN.HEIGHT);
+        ctx.fillRect(SCREEN.WIDTH - 200, 0, 200, SCREEN.HEIGHT);
+        ctx.strokeStyle = 'rgba(255,0,0,0.3)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([8, 4]);
+        ctx.beginPath(); ctx.moveTo(200, 0); ctx.lineTo(200, SCREEN.HEIGHT); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(SCREEN.WIDTH - 200, 0); ctx.lineTo(SCREEN.WIDTH - 200, SCREEN.HEIGHT); ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    // School building
+    ctx.fillStyle = '#8B0000';
+    ctx.fillRect(SCHOOL.X, SCHOOL.Y, SCHOOL.WIDTH, SCHOOL.HEIGHT);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('SCHOOL', SCHOOL.X + SCHOOL.WIDTH / 2, SCHOOL.Y + 20);
+
+    // Spawn marker
+    ctx.fillStyle = 'rgba(52,152,219,0.4)';
+    ctx.beginPath(); ctx.arc(TEACHER.SPAWN_X, SCREEN.HEIGHT / 2, 20, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3498db';
+    ctx.font = 'bold 11px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('SPAWN', TEACHER.SPAWN_X, SCREEN.HEIGHT / 2 + 35);
+
+    // Draw obstacles
+    for (let i = 0; i < obstacles.length; i++) {
+        const obs = obstacles[i];
+        const cfg = OBSTACLE_TYPES[obs.type];
+        const isSelected = (dragging === i);
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(obs.x + 3, obs.y + 3, cfg.width, cfg.height);
+
+        // Body
+        ctx.fillStyle = cfg.color;
+        ctx.fillRect(obs.x, obs.y, cfg.width, cfg.height);
+
+        // Border
+        ctx.strokeStyle = isSelected ? '#fff' : 'rgba(255,255,255,0.3)';
+        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.strokeRect(obs.x, obs.y, cfg.width, cfg.height);
+
+        // Label
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 11px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(cfg.label, obs.x + cfg.width / 2, obs.y + cfg.height / 2 - 6);
+        ctx.font = '10px Arial';
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fillText(`(${obs.x}, ${obs.y})`, obs.x + cfg.width / 2, obs.y + cfg.height / 2 + 8);
+        ctx.textBaseline = 'alphabetic';
+    }
+
+    // Placement preview
+    if (selectedType && !dragging) {
+        const cfg = OBSTACLE_TYPES[selectedType];
+        const px = snap(mouseX - cfg.width / 2);
+        const py = snap(mouseY - cfg.height / 2);
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = cfg.color;
+        ctx.fillRect(px, py, cfg.width, cfg.height);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px, py, cfg.width, cfg.height);
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+// --- Interaction ---
+function selectType(type) {
+    if (selectedType === type) {
+        selectedType = null;
+    } else {
+        selectedType = type;
+    }
+    document.querySelectorAll('.palette-item').forEach(el => {
+        el.classList.toggle('selected', el.dataset.type === selectedType);
+    });
+    canvas.style.cursor = selectedType ? 'crosshair' : 'default';
+    render();
+}
+
+function getObstacleAt(x, y) {
+    // Search in reverse so topmost is found first
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        const cfg = OBSTACLE_TYPES[obs.type];
+        if (x >= obs.x && x <= obs.x + cfg.width && y >= obs.y && y <= obs.y + cfg.height) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2) return; // right-click handled in contextmenu
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Check if clicking existing obstacle
+    const idx = getObstacleAt(x, y);
+    if (idx >= 0 && !selectedType) {
+        dragging = idx;
+        dragOffsetX = x - obstacles[idx].x;
+        dragOffsetY = y - obstacles[idx].y;
+        canvas.style.cursor = 'grabbing';
+        render();
+        return;
+    }
+
+    // Place new obstacle
+    if (selectedType) {
+        const cfg = OBSTACLE_TYPES[selectedType];
+        const px = snap(x - cfg.width / 2);
+        const py = snap(y - cfg.height / 2);
+        obstacles.push({ type: selectedType, x: px, y: py });
+        render();
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+
+    document.getElementById('coords').textContent = `x: ${Math.round(mouseX)}, y: ${Math.round(mouseY)}`;
+
+    if (dragging !== null) {
+        obstacles[dragging].x = snap(mouseX - dragOffsetX);
+        obstacles[dragging].y = snap(mouseY - dragOffsetY);
+    }
+    render();
+});
+
+canvas.addEventListener('mouseup', () => {
+    if (dragging !== null) {
+        dragging = null;
+        canvas.style.cursor = selectedType ? 'crosshair' : 'default';
+        render();
+    }
+});
+
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const idx = getObstacleAt(x, y);
+    if (idx >= 0) {
+        obstacles.splice(idx, 1);
+        render();
+    }
+});
+
+canvas.addEventListener('mouseleave', () => {
+    if (dragging !== null) {
+        dragging = null;
+        canvas.style.cursor = selectedType ? 'crosshair' : 'default';
+    }
+});
+
+// --- Export ---
+function exportCode() {
+    const json = {
+        obstacles: obstacles.map(obs => ({
+            type: obs.type,
+            x: obs.x,
+            y: obs.y
+        }))
+    };
+
+    document.getElementById('codeOutput').value = JSON.stringify(json, null, 4);
+}
+
+function copyCode() {
+    const textarea = document.getElementById('codeOutput');
+    if (!textarea.value) exportCode();
+    textarea.select();
+    navigator.clipboard.writeText(textarea.value);
+}
+
+function downloadJson() {
+    exportCode();
+    const blob = new Blob([document.getElementById('codeOutput').value], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'level.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function clearAll() {
+    if (confirm('Remove all obstacles?')) {
+        obstacles = [];
+        render();
+    }
+}
+
+// --- Init ---
+loadDefaults();
+render();
+</script>
+</body>
+</html>
