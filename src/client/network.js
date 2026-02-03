@@ -63,6 +63,9 @@ export class NetworkManager {
             case "disconnected":
                 this.callbacks.onDisconnected?.(data);
                 break;
+            case "tts_audio":
+                this.callbacks.onTTSAudio?.(data.audio);
+                break;
         }
     }
 
@@ -84,6 +87,11 @@ export class NetworkManager {
     sendRestart() {
         if (!this.connected || !this.socket) return;
         this.socket.send(JSON.stringify({ type: "restart" }));
+    }
+
+    sendTTSRequest(text) {
+        if (!this.connected || !this.socket) return;
+        this.socket.send(JSON.stringify({ type: "tts", text }));
     }
 
     disconnect() {

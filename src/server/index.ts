@@ -5,6 +5,51 @@ import { GAME_STATE } from "../shared/config.js";
 const TICK_RATE = 20; // 20Hz server tick
 const TICK_MS = 1000 / TICK_RATE;
 
+// ElevenLabs TTS configuration
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+const ELEVENLABS_VOICE_ID = 'pNInz6obpgDQGcFmaJgB'; // Adam voice
+
+async function generateTTS(text: string): Promise<string | null> {
+  if (!ELEVENLABS_API_KEY || ELEVENLABS_API_KEY === 'your_api_key_here') {
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}?optimize_streaming_latency=3`,
+      {
+        method: 'POST',
+        headers: {
+          'xi-api-key': ELEVENLABS_API_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text,
+          model_id: 'eleven_flash_v2_5',
+          voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      console.error('ElevenLabs TTS error:', response.status);
+      return null;
+    }
+
+    const buffer = await response.arrayBuffer();
+    // Convert to base64
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  } catch (err) {
+    console.error('ElevenLabs TTS error:', err);
+    return null;
+  }
+}
+
 const VALID_ROLES = ["teacher1", "teacher2", "pupil1", "pupil2"] as const;
 const TEACHER_ROLES = ["teacher1", "teacher2"] as const;
 const PUPIL_ROLES = ["pupil1", "pupil2"] as const;
@@ -65,7 +110,7 @@ export default class RecessRevengeServer implements Party.Server {
     this.broadcastLobbyState();
   }
 
-  onMessage(message: string, sender: Party.Connection) {
+  async onMessage(message: string, sender: Party.Connection) {
     const player = this.players.get(sender.id);
     if (!player) return;
 
@@ -112,6 +157,15 @@ export default class RecessRevengeServer implements Party.Server {
             this.broadcastLobbyState();
           }
           break;
+
+        case "tts": {
+          // Handle text-to-speech request
+          const audioBase64 = await generateTTS(data.text);
+          if (audioBase64) {
+            sender.send(JSON.stringify({ type: 'tts_audio', audio: audioBase64 }));
+          }
+          break;
+        }
       }
     } catch (err) {
       // Ignore bad messages

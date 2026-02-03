@@ -66,6 +66,11 @@ export class CommentaryManager {
         this.globalLastTrigger = 0;
         this.globalMinInterval = 500; // 500ms between any commentary
 
+        // TTS support
+        this.ttsEnabled = true;
+        this.currentAudio = null;
+        this.networkManager = null;
+
         // Configuration
         this.config = {
             maxVisibleLines: 2,
@@ -77,8 +82,48 @@ export class CommentaryManager {
         };
     }
 
+    setNetwork(networkManager) {
+        this.networkManager = networkManager;
+    }
+
+    requestTTS(text) {
+        if (!this.ttsEnabled || !this.networkManager) return;
+        this.networkManager.sendTTSRequest(text);
+    }
+
+    playTTSAudio(base64Audio) {
+        // Stop any currently playing audio
+        if (this.currentAudio) {
+            this.currentAudio.pause();
+            this.currentAudio = null;
+        }
+
+        // Create and play new audio
+        try {
+            const binaryString = atob(base64Audio);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            this.currentAudio = new Audio(audioUrl);
+            this.currentAudio.volume = 0.8;
+            this.currentAudio.play().catch(() => {});
+
+            // Cleanup URL after playback
+            this.currentAudio.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                this.currentAudio = null;
+            };
+        } catch (err) {
+            console.error('TTS audio playback error:', err);
+        }
+    }
+
     toggle() {
         this.enabled = !this.enabled;
+        this.ttsEnabled = this.enabled; // Sync TTS with text toggle
         if (!this.enabled) {
             // Clear all active commentary when disabled
             for (const line of this.activeLines) {
@@ -86,6 +131,11 @@ export class CommentaryManager {
                 line.sprite.destroy();
             }
             this.activeLines = [];
+            // Stop any playing audio
+            if (this.currentAudio) {
+                this.currentAudio.pause();
+                this.currentAudio = null;
+            }
         }
     }
 
@@ -109,6 +159,9 @@ export class CommentaryManager {
 
         // Display the commentary
         this.displayCommentary(text, eventData.priority);
+
+        // Request TTS audio
+        this.requestTTS(text);
 
         // Record trigger
         this.recordTrigger(eventType, text);

@@ -52,6 +52,7 @@ class GameClient {
             onStart: (data) => this.onGameStart(data),
             onState: (state) => this.onState(state),
             onDisconnected: (data) => this.onDisconnected(data),
+            onTTSAudio: (audio) => this.commentary?.playTTSAudio(audio),
         });
 
         this.network.connect(roomId);
@@ -276,6 +277,7 @@ class GameClient {
         }
         // Initialize commentary system
         this.commentary = new CommentaryManager(this.renderer.uiLayer);
+        this.commentary.setNetwork(this.network);
         this.commentary.trigger('gameStart');
         this.prevState = null;
     }
