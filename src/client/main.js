@@ -5,6 +5,7 @@ import { NetworkManager } from './network.js';
 import { GameRenderer } from './renderer.js';
 import { InputManager } from './input.js';
 import { StateInterpolator } from './interpolation.js';
+import { CommentaryManager } from './commentary.js';
 
 class GameClient {
     constructor() {
@@ -21,8 +22,11 @@ class GameClient {
         this.lastState = null;
         this.lobbyState = null;
         this.prevMusicToggle = false;
+        this.prevCommentaryToggle = false;
         this.teacherCount = 1;
         this.pupilCount = 1;
+        this.commentary = null;
+        this.prevState = null;
     }
 
     async init() {
@@ -84,6 +88,13 @@ class GameClient {
         }
         this.prevMusicToggle = musicKeyDown;
 
+        // Handle commentary toggle (C key, edge-detected)
+        const commentaryKeyDown = this.input.isKeyDown('COMMENTARY_TOGGLE');
+        if (commentaryKeyDown && !this.prevCommentaryToggle) {
+            this.commentary?.toggle();
+        }
+        this.prevCommentaryToggle = commentaryKeyDown;
+
         // Handle restart — go back to lobby
         if (this.gameState === GAME_STATE.GAME_OVER && this.input.isRestartPressed()) {
             this.network.sendRestart();
@@ -122,6 +133,38 @@ class GameClient {
                 this.handleGameEvent(event);
             }
         }
+
+        // Commentary state change detection
+        this.detectCommentaryEvents(state, this.prevState);
+        this.commentary?.update(deltaTime);
+        this.prevState = state;
+    }
+
+    detectCommentaryEvents(state, prevState) {
+        if (!prevState || !this.commentary) return;
+
+        // Sprint detection
+        for (const teacher of state.teachers || []) {
+            const prev = prevState.teachers?.find(t => t.slot === teacher.slot);
+            if (teacher.sprinting && !prev?.sprinting) {
+                this.commentary.trigger('sprint');
+            }
+        }
+
+        // Timer critical (<= 10 seconds)
+        if (state.time <= 10 && prevState.time > 10) {
+            this.commentary.trigger('timerCritical');
+        }
+
+        // Out of eggs
+        if (state.eggPool?.eggs === 0 && prevState.eggPool?.eggs > 0) {
+            this.commentary.trigger('outOfEggs');
+        }
+
+        // Refill detection
+        if (state.eggPool?.eggs > prevState.eggPool?.eggs && prevState.eggPool?.eggs < state.eggPool?.maxEggs) {
+            this.commentary.trigger('refill');
+        }
     }
 
     handleGameEvent(event) {
@@ -132,9 +175,15 @@ class GameClient {
                 this.renderer.createSplat(event.x, event.y);
                 this.renderer.createScreenShake(15, 0.4);
                 this.renderer.createImpactParticles(event.x, event.y);
+                // Commentary for hit - check if near goal
+                this.commentary?.trigger('hit', { nearGoal: event.x > 1100 });
                 break;
             case 'throw':
                 this.renderer.audio.playSound('eggThrow');
+                // Commentary for ~30% of throws to avoid spam
+                if (Math.random() < 0.3) {
+                    this.commentary?.trigger('throw');
+                }
                 break;
             case 'splat':
                 this.renderer.createSplat(event.x, event.y);
@@ -144,8 +193,10 @@ class GameClient {
                 this.renderer.app.canvas.style.cursor = '';
                 if (event.winner === WINNER.TEACHER) {
                     this.renderer.audio.playSound('teacherWin');
+                    this.commentary?.trigger('teacherWin');
                 } else {
                     this.renderer.audio.playSound('pupilWin');
+                    this.commentary?.trigger('pupilWin');
                 }
                 this.renderer.showGameOver(event.winner);
                 break;
@@ -198,6 +249,8 @@ class GameClient {
             this.gameState = GAME_STATE.LOBBY;
             this.renderer.app.canvas.style.cursor = '';
             this.renderer.cleanupGame();
+            this.commentary?.cleanup();
+            this.commentary = null;
             this.renderLobby();
         }
     }
@@ -221,6 +274,10 @@ class GameClient {
         if (roleTeam(this.role) === 'pupil') {
             this.renderer.app.canvas.style.cursor = 'none';
         }
+        // Initialize commentary system
+        this.commentary = new CommentaryManager(this.renderer.uiLayer);
+        this.commentary.trigger('gameStart');
+        this.prevState = null;
     }
 
     onState(state) {
@@ -246,6 +303,8 @@ class GameClient {
         this.renderer.app.canvas.style.cursor = '';
         this.renderer.audio.stopMusic();
         this.renderer.cleanupGame();
+        this.commentary?.cleanup();
+        this.commentary = null;
         this.renderer.showDisconnected(data.message);
     }
 }

@@ -87,7 +87,8 @@ export const CONFIG = {
         SPRINT: ['Shift'],
         PAUSE: ['Escape'],
         RESTART: [' ', 'Enter'],
-        MUSIC_TOGGLE: ['m', 'M']
+        MUSIC_TOGGLE: ['m', 'M'],
+        COMMENTARY_TOGGLE: ['c', 'C']
     }
 };
 
