@@ -6,9 +6,9 @@ import { AudioManager } from './audio.js';
 // PixiJS loaded via CDN globally
 const PIXI = window.PIXI;
 
-// Texture caches
-let TEACHER_SPRITESHEET = null;
-let PUPIL_SPRITESHEET = null;
+// Texture caches (per-slot spritesheets: index 0 = player 1, index 1 = player 2)
+let TEACHER_SPRITESHEETS = [null, null];
+let PUPIL_SPRITESHEETS = [null, null];
 let TREE_TEXTURES = [];
 let BUSH_TEXTURE = null;
 let BENCH_TEXTURE = null;
@@ -86,12 +86,20 @@ export class GameRenderer {
 
     async preloadAssets() {
         try {
-            TEACHER_SPRITESHEET = await PIXI.Assets.load('assets/models/teacher-spritesheet.json');
+            TEACHER_SPRITESHEETS[0] = await PIXI.Assets.load('assets/models/teacher-spritesheet.json');
         } catch (e) { console.warn('Teacher spritesheet failed:', e); }
 
         try {
-            PUPIL_SPRITESHEET = await PIXI.Assets.load('assets/models/pupil-spritesheet.json');
+            TEACHER_SPRITESHEETS[1] = await PIXI.Assets.load('assets/models/teacher2-spritesheet.json');
+        } catch (e) { console.warn('Teacher2 spritesheet failed:', e); }
+
+        try {
+            PUPIL_SPRITESHEETS[0] = await PIXI.Assets.load('assets/models/pupil-spritesheet.json');
         } catch (e) { console.warn('Pupil spritesheet failed:', e); }
+
+        try {
+            PUPIL_SPRITESHEETS[1] = await PIXI.Assets.load('assets/models/pupil2-spritesheet.json');
+        } catch (e) { console.warn('Pupil2 spritesheet failed:', e); }
 
         try {
             for (const path of ['assets/models/tree1.png', 'assets/models/tree2.png']) {
@@ -233,9 +241,10 @@ export class GameRenderer {
 
     // --- Teacher rendering ---
     createTeacher(slot) {
+        const sheet = TEACHER_SPRITESHEETS[slot] || TEACHER_SPRITESHEETS[0];
         let sprite;
-        if (TEACHER_SPRITESHEET) {
-            const textures = TEACHER_SPRITESHEET.animations.idle;
+        if (sheet) {
+            const textures = sheet.animations.idle;
             sprite = new PIXI.AnimatedSprite(textures);
             sprite.anchor.set(0.5, 0.5);
             sprite.animationSpeed = 0.1;
@@ -244,8 +253,9 @@ export class GameRenderer {
             const scale = (CONFIG.TEACHER.SIZE * 2) / 64;
             sprite.scale.set(scale, scale);
         } else {
+            const color = slot === 1 ? CONFIG.COLORS.TEACHER2 : CONFIG.COLORS.TEACHER;
             sprite = new PIXI.Graphics();
-            sprite.beginFill(CONFIG.COLORS.TEACHER);
+            sprite.beginFill(color);
             sprite.drawCircle(0, 0, CONFIG.TEACHER.HITBOX_RADIUS);
             sprite.endFill();
         }
@@ -263,10 +273,11 @@ export class GameRenderer {
         sprite.y = state.y;
 
         // Animation switch
+        const sheet = TEACHER_SPRITESHEETS[slot] || TEACHER_SPRITESHEETS[0];
         const currentAnim = this.teacherAnims.get(slot);
-        if (state.anim !== currentAnim && TEACHER_SPRITESHEET) {
+        if (state.anim !== currentAnim && sheet) {
             this.teacherAnims.set(slot, state.anim);
-            const newTextures = TEACHER_SPRITESHEET.animations[state.anim];
+            const newTextures = sheet.animations[state.anim];
             if (newTextures && sprite.textures) {
                 sprite.textures = newTextures;
                 sprite.animationSpeed = state.anim === 'sprint' ? 0.2 : state.anim === 'walk' ? 0.15 : 0.1;
@@ -287,7 +298,7 @@ export class GameRenderer {
             sprite.alpha = Math.sin(Date.now() * 0.02) * 0.5 + 0.5;
         } else if (state.hidden) {
             sprite.alpha = 0.6;
-            sprite.tint = CONFIG.COLORS.TEACHER_HIDDEN;
+            sprite.tint = 0x888888;
         } else {
             sprite.alpha = 1.0;
             sprite.tint = 0xffffff;
@@ -303,9 +314,12 @@ export class GameRenderer {
 
     // --- Pupil rendering ---
     createPupil(slot) {
+        const crosshairColor = slot === 1 ? CONFIG.COLORS.CROSSHAIR2 : CONFIG.COLORS.CROSSHAIR;
+
         // Pupil character sprite
-        if (PUPIL_SPRITESHEET) {
-            const textures = PUPIL_SPRITESHEET.animations.idle;
+        const sheet = PUPIL_SPRITESHEETS[slot] || PUPIL_SPRITESHEETS[0];
+        if (sheet) {
+            const textures = sheet.animations.idle;
             const sprite = new PIXI.AnimatedSprite(textures);
             sprite.anchor.set(0.5, 0.5);
             sprite.animationSpeed = 0.1;
@@ -320,13 +334,13 @@ export class GameRenderer {
 
         // Crosshair
         const ch = new PIXI.Graphics();
-        ch.lineStyle(2, CONFIG.COLORS.CROSSHAIR, 1);
+        ch.lineStyle(2, crosshairColor, 1);
         ch.drawCircle(0, 0, 12);
         ch.moveTo(-16, 0); ch.lineTo(-4, 0);
         ch.moveTo(4, 0); ch.lineTo(16, 0);
         ch.moveTo(0, -16); ch.lineTo(0, -4);
         ch.moveTo(0, 4); ch.lineTo(0, 16);
-        ch.beginFill(CONFIG.COLORS.CROSSHAIR);
+        ch.beginFill(crosshairColor);
         ch.drawCircle(0, 0, 2);
         ch.endFill();
         this.crosshairSprites.set(slot, ch);
@@ -345,11 +359,12 @@ export class GameRenderer {
 
         // Pupil sprite animation
         const pupilSprite = this.pupilSprites.get(slot);
+        const pSheet = PUPIL_SPRITESHEETS[slot] || PUPIL_SPRITESHEETS[0];
         const currentAnim = this.pupilAnims.get(slot);
-        if (pupilSprite && PUPIL_SPRITESHEET) {
+        if (pupilSprite && pSheet) {
             if (state.anim !== currentAnim) {
                 this.pupilAnims.set(slot, state.anim);
-                const newTextures = PUPIL_SPRITESHEET.animations[state.anim];
+                const newTextures = pSheet.animations[state.anim];
                 if (newTextures) {
                     pupilSprite.textures = newTextures;
                     pupilSprite.animationSpeed = state.anim === 'throw' ? 0.2 : 0.1;
@@ -366,6 +381,8 @@ export class GameRenderer {
             ch.x = state.crossX;
             ch.y = state.crossY;
 
+            const localTint = slot === 1 ? 0xff8844 : 0xff4444;
+            const remoteTint = slot === 1 ? 0xcc66ff : 0xff8800;
             if (isLocal) {
                 if (eggPool && eggPool.refilling) {
                     const pulse = Math.sin(Date.now() / 100) * 0.2 + 1.0;
@@ -373,13 +390,13 @@ export class GameRenderer {
                     ch.tint = 0x00ff00;
                     ch.alpha = 0.8;
                 } else {
-                    ch.tint = 0xff4444;
+                    ch.tint = localTint;
                     ch.alpha = 0.5;
                     ch.scale.set(1.0);
                 }
             } else {
                 // Other player's crosshair — dimmer and smaller
-                ch.tint = 0xff8800;
+                ch.tint = remoteTint;
                 ch.alpha = 0.3;
                 ch.scale.set(0.7);
             }
@@ -401,7 +418,8 @@ export class GameRenderer {
                     const linearY = startY + dy * t;
                     const arcOffset = CONFIG.EGG.ARC_HEIGHT * 4 * t * (1 - t);
                     const y = linearY - arcOffset;
-                    traj.beginFill(CONFIG.COLORS.TRAJECTORY, 0.6);
+                    const trajColor = slot === 1 ? CONFIG.COLORS.TRAJECTORY2 : CONFIG.COLORS.TRAJECTORY;
+                    traj.beginFill(trajColor, 0.6);
                     traj.drawCircle(x, y, 3);
                     traj.endFill();
                 }
@@ -734,11 +752,11 @@ export class GameRenderer {
             lobbyState, 'teacher1', callbacks
         );
 
-        // Teacher 2
+        // Teacher 2 (green)
         this._createRoleCard(
             leftCol, row2Y, cardW, cardH,
             'TEACHER 2', 'WASD + Shift\nDodge eggs!\nReach school!',
-            0x3498db, 0x1a6da8,
+            0x2ecc71, 0x1a9c55,
             lobbyState, 'teacher2', callbacks
         );
 
@@ -750,11 +768,11 @@ export class GameRenderer {
             lobbyState, 'pupil1', callbacks
         );
 
-        // Pupil 2
+        // Pupil 2 (purple)
         this._createRoleCard(
             rightCol, row2Y, cardW, cardH,
             'PUPIL 2', 'Mouse + Click\nThrow eggs!\nStop teachers!',
-            0xe74c3c, 0xb33a2e,
+            0x9b59b6, 0x7d3c98,
             lobbyState, 'pupil2', callbacks
         );
 

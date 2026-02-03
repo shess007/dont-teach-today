@@ -60,10 +60,13 @@ export const CONFIG = {
     COLORS: {
         TEACHER: 0x3498db,
         TEACHER_HIDDEN: 0x2c7ab8,
+        TEACHER2: 0x2ecc71,
         CROSSHAIR: 0xff0000,
+        CROSSHAIR2: 0xff8800,
+        TRAJECTORY: 0xff0000,
+        TRAJECTORY2: 0xff8800,
         EGG: 0xFFFDD0,
         EGG_SPLAT: 0xFFFF00,
-        TRAJECTORY: 0xff0000,
         ASPHALT: 0x3a3a3a,
         PATH: 0x505050
     },
