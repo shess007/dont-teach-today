@@ -79,6 +79,9 @@ export const CONFIG = {
         WARNING_COLOR: 0xff0000,
         WARNING_THRESHOLD: 30
     },
+    COMMENTARY: {
+        TTS_VOLUME: 0.05  // 0.0 to 1.0
+    },
     KEYS: {
         UP: ['w', 'W', 'ArrowUp'],
         DOWN: ['s', 'S', 'ArrowDown'],

@@ -108,7 +108,7 @@ export class CommentaryManager {
             const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
             const audioUrl = URL.createObjectURL(audioBlob);
             this.currentAudio = new Audio(audioUrl);
-            this.currentAudio.volume = 0.8;
+            this.currentAudio.volume = CONFIG.COMMENTARY?.TTS_VOLUME ?? 0.1;
             this.currentAudio.play().catch(() => {});
 
             // Cleanup URL after playback
