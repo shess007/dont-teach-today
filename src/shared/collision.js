@@ -7,6 +7,7 @@ export class CollisionManager {
     checkEggTeacherCollision(egg, teacher) {
         if (teacher.isInvulnerable) return false;
         if (teacher.isHidden) return false;
+        if (teacher.isInGoalZone) return false;
 
         return Utils.circleCollision(
             egg.x, egg.y, CONFIG.EGG.HITBOX_RADIUS,

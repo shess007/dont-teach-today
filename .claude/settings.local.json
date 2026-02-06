@@ -5,7 +5,8 @@
       "Bash(sips:*)",
       "WebFetch(domain:docs.partykit.io)",
       "Bash(node build.js:*)",
-      "WebFetch(domain:elevenlabs.io)"
+      "WebFetch(domain:elevenlabs.io)",
+      "Bash(npm run build:*)"
     ]
   }
 }

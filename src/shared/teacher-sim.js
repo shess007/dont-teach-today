@@ -17,6 +17,7 @@ export class TeacherSimulation {
         this.isInvulnerable = false;
         this.invulnerabilityTimer = 0;
         this.isHidden = false;
+        this.isInGoalZone = false;
         this.isSprinting = false;
 
         this.sprintAvailable = true;
@@ -69,6 +70,9 @@ export class TeacherSimulation {
 
         // Bush hiding
         this.updateHidingState(obstacles);
+
+        // Goal zone protection
+        this.isInGoalZone = this.x >= CONFIG.TEACHER.GOAL_X;
 
         // Animation
         this.updateAnimation(direction);
@@ -195,6 +199,7 @@ export class TeacherSimulation {
             invuln: this.isInvulnerable,
             invulnT: Math.round(this.invulnerabilityTimer * 100) / 100,
             hidden: this.isHidden,
+            inGoal: this.isInGoalZone,
             sprint: this.isSprinting,
             sprintT: Math.round(this.sprintTimer * 100) / 100,
             sprintCD: Math.round(this.sprintCooldownTimer * 100) / 100,

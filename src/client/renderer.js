@@ -293,8 +293,12 @@ export class GameRenderer {
             sprite.scale.set(scaleX, baseScale * mult);
         }
 
-        // Invulnerability flashing
-        if (state.invuln) {
+        // Visual state
+        if (state.inGoal) {
+            // Safe in goal zone - golden glow pulse
+            sprite.alpha = 0.85 + Math.sin(Date.now() * 0.005) * 0.15;
+            sprite.tint = 0xFFD700;
+        } else if (state.invuln) {
             sprite.alpha = Math.sin(Date.now() * 0.02) * 0.5 + 0.5;
         } else if (state.hidden) {
             sprite.alpha = 0.6;
