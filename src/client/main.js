@@ -1,6 +1,6 @@
 // RECESS REVENGE - Client Entry Point
 
-import { GAME_STATE, WINNER, roleTeam } from '../shared/config.js';
+import { CONFIG, GAME_STATE, WINNER, roleTeam } from '../shared/config.js';
 import { NetworkManager } from './network.js';
 import { GameRenderer } from './renderer.js';
 import { InputManager } from './input.js';
@@ -275,10 +275,12 @@ class GameClient {
         if (roleTeam(this.role) === 'pupil') {
             this.renderer.app.canvas.style.cursor = 'none';
         }
-        // Initialize commentary system
-        this.commentary = new CommentaryManager(this.renderer.uiLayer);
-        this.commentary.setNetwork(this.network);
-        this.commentary.trigger('gameStart');
+        // Initialize commentary system (if enabled)
+        if (CONFIG.COMMENTARY.ENABLED) {
+            this.commentary = new CommentaryManager(this.renderer.uiLayer);
+            this.commentary.setNetwork(this.network);
+            this.commentary.trigger('gameStart');
+        }
         this.prevState = null;
     }
 

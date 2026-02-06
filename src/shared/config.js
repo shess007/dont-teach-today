@@ -80,6 +80,7 @@ export const CONFIG = {
         WARNING_THRESHOLD: 30
     },
     COMMENTARY: {
+        ENABLED: false,
         TTS_VOLUME: 0.05  // 0.0 to 1.0
     },
     KEYS: {
